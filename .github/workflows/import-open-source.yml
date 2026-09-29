@@ -9,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: open-source-import
+  cancel-in-progress: true
+
 jobs:
   import:
     runs-on: ubuntu-latest
@@ -35,7 +39,6 @@ jobs:
             git clone --recurse-submodules "https://github.com/$source.git" "/tmp/open-source-clones/$target"
             if git -C "/tmp/open-source-clones/$target" lfs env >/dev/null 2>&1; then
               git -C "/tmp/open-source-clones/$target" lfs install --local
-              git -C "/tmp/open-source-clones/$target" lfs pull || true
             fi
             if [ "$source" = "microsoft/autogen" ]; then
               mkdir -p "/tmp/open-source-clones/$target/dotnet/website/images/articles/SequentialGroupChat"
