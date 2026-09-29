@@ -1,0 +1,118 @@
+import assert from 'node:assert/strict';
+import {describe, it, beforeEach, afterEach} from 'node:test';
+
+import axios from 'axios';
+import {createSandbox, type SinonSandbox} from 'sinon';
+import * as teenProcess from 'teen_process';
+
+import {APPIUM_VER, getBuildInfo, getGitRev, updateBuildInfo} from '../../lib/helpers/build';
+
+describe('Config', function () {
+  let sandbox: SinonSandbox;
+
+  beforeEach(function () {
+    sandbox = createSandbox();
+  });
+
+  afterEach(function () {
+    sandbox.verify();
+    sandbox.restore();
+  });
+
+  describe('getGitRev', function () {
+    it('should get a reasonable git revision', async function () {
+      const rev = await getGitRev();
+      assert.strictEqual(typeof rev, 'string');
+      assert.notStrictEqual(rev, null);
+      assert.strictEqual(rev!.length, 40);
+      assert.strictEqual(rev!.match(/[0-9a-f]+/i)![0], rev);
+    });
+  });
+
+  describe('getBuildInfo', function () {
+    const SHA = 'a7404fddd50ee1c6ff1aac3d2f259abab0d3291a';
+    const DATE = '2022-06-04T02:08:17Z';
+
+    async function verifyBuildInfoUpdate(useLocalGit: boolean, opts: {sha?: string; built?: string} = {}) {
+      const buildInfo = getBuildInfo();
+      const {sha, built} = opts;
+
+      const innerExecStub = sandbox.stub().throws();
+      if (!useLocalGit) {
+        sandbox.stub(teenProcess, 'exec').get(() => innerExecStub);
+      }
+      (buildInfo as unknown as Record<string, undefined>)['git-sha'] = undefined;
+      (buildInfo as unknown as Record<string, undefined>).built = undefined;
+      await updateBuildInfo(true);
+      assert.strictEqual(typeof buildInfo, 'object');
+      if (sha) {
+        assert.strictEqual(buildInfo['git-sha'], sha);
+      } else {
+        assert.ok(buildInfo['git-sha']);
+      }
+      if (built) {
+        assert.strictEqual(buildInfo.built, built);
+      } else {
+        assert.ok(buildInfo.built);
+      }
+      assert.ok(buildInfo.version);
+
+      if (!useLocalGit) {
+        assert.ok(innerExecStub.callCount >= 1);
+      }
+    }
+
+    let getStub: ReturnType<SinonSandbox['stub']>;
+    beforeEach(function () {
+      getStub = sandbox.stub(axios, 'get');
+    });
+    afterEach(function () {
+      getStub.restore();
+    });
+
+    it('should get a configuration object if the local git metadata is present', async function () {
+      await verifyBuildInfoUpdate(true);
+    });
+
+    it('should get a configuration object if the local git metadata is not present', async function () {
+      getStub.onCall(0).returns({
+        data: {
+          ref: `refs/tags/appium@${APPIUM_VER}`,
+          node_id: 'MDM6UmVmNzUzMDU3MDpyZWZzL3RhZ3MvYXBwaXVtQDIuMC4wLWJldGEuNDA=',
+          url: `https://api.github.com/repos/appium/appium/git/refs/tags/appium@${APPIUM_VER}`,
+          object: {
+            sha: SHA,
+            type: 'tag',
+            url: `https://api.github.com/repos/appium/appium/git/tags/${SHA}`,
+          },
+        },
+      });
+      getStub.onCall(1).returns({
+        data: {
+          node_id: 'TA_kwDOAHLoStoAKGE3NDA0ZmRkZDUwZWUxYzZmZjFhYWMzZDJmMjU5YWJhYjBkMzI5MWE',
+          sha: SHA,
+          url: `https://api.github.com/repos/appium/appium/git/tags/${SHA}`,
+          tagger: {
+            name: 'Jonathan Lipps',
+            email: 'jlipps@gmail.com',
+            date: DATE,
+          },
+          object: {
+            sha: '4cf2cc92d066ed32adda27e0439547290a4b71ce',
+            type: 'commit',
+            url: 'https://api.github.com/repos/appium/appium/git/commits/4cf2cc92d066ed32adda27e0439547290a4b71ce',
+          },
+          tag: `appium@${APPIUM_VER}`,
+          message: `appium@${APPIUM_VER}\n`,
+          verification: {
+            verified: false,
+            reason: 'unsigned',
+            signature: null,
+            payload: null,
+          },
+        },
+      });
+      await verifyBuildInfoUpdate(false, {sha: SHA, built: DATE});
+    });
+  });
+});

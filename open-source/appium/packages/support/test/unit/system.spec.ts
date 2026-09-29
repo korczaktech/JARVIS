@@ -1,0 +1,135 @@
+import assert from 'node:assert/strict';
+import os from 'node:os';
+import {afterEach, beforeEach, describe, it} from 'node:test';
+
+import {createSandbox} from 'sinon';
+import * as teen_process from 'teen_process';
+
+import {system, util} from '../../lib';
+
+const SANDBOX = Symbol();
+const libs = {os, system};
+
+describe('system', function () {
+  let sandbox: ReturnType<typeof createSandbox>;
+  let osMock: ReturnType<typeof createSandbox>['mock'] extends (obj: infer _O) => infer R ? R : never;
+  let mocks: Record<string | symbol, any>;
+
+  beforeEach(function () {
+    sandbox = createSandbox();
+    mocks = {};
+  });
+
+  afterEach(function () {
+    sandbox.verify();
+    sandbox.restore();
+  });
+
+  describe('isX functions', function () {
+    beforeEach(function () {
+      osMock = sandbox.mock(os);
+    });
+    afterEach(function () {
+      osMock.verify();
+    });
+
+    it('should correctly return Windows System if it is a Windows', function () {
+      osMock.expects('type').returns('Windows_NT');
+      assert.strictEqual(system.isWindows(), true);
+    });
+
+    it('should correctly return Mac if it is a Mac', function () {
+      osMock.expects('type').returns('Darwin');
+      assert.strictEqual(system.isMac(), true);
+    });
+
+    it('should correctly return Linux if it is a Linux', function () {
+      osMock.expects('type').twice().returns('Linux');
+      assert.strictEqual(system.isLinux(), true);
+    });
+  });
+
+  describe('mac OSX version', function () {
+    it('should return correct version for 10.10.5', async function () {
+      (sandbox.stub(teen_process, 'exec') as any).get(() =>
+        sandbox.stub().withArgs('sw_vers', ['-productVersion']).returns({stdout: '10.10.5'}),
+      );
+      assert.strictEqual(await system.macOsxVersion(), '10.10');
+    });
+
+    it('should return correct version for 10.12', async function () {
+      (sandbox.stub(teen_process, 'exec') as any).get(() =>
+        sandbox.stub().withArgs('sw_vers', ['-productVersion']).returns({stdout: '10.12.0'}),
+      );
+      assert.strictEqual(await system.macOsxVersion(), '10.12');
+    });
+
+    it('should return correct version for 10.12 with newline', async function () {
+      (sandbox.stub(teen_process, 'exec') as any).get(() =>
+        sandbox.stub().withArgs('sw_vers', ['-productVersion']).returns({stdout: '10.12   \n'}),
+      );
+      assert.strictEqual(await system.macOsxVersion(), '10.12');
+    });
+
+    it("should throw an error if OSX version can't be determined", async function () {
+      const invalidOsx = 'error getting operation system version blabla';
+      (sandbox.stub(teen_process, 'exec') as any).get(() =>
+        sandbox.stub().withArgs('sw_vers', ['-productVersion']).returns({stdout: invalidOsx}),
+      );
+      await assert.rejects(system.macOsxVersion(), new RegExp(util.escapeRegExp(invalidOsx)));
+    });
+  });
+
+  describe('architecture', function () {
+    beforeEach(function () {
+      mocks[SANDBOX] = sandbox;
+      for (const [key, value] of Object.entries(libs)) {
+        mocks[key] = sandbox.mock(value);
+      }
+    });
+
+    afterEach(function () {
+      sandbox.restore();
+    });
+
+    it('should return correct architecture if it is a 64 bit Mac/Linux', async function () {
+      mocks.os.expects('type').thrice().returns('Darwin');
+      (sandbox.stub(teen_process, 'exec') as any).get(() =>
+        sandbox.stub().withArgs('uname', ['-m']).returns({stdout: 'x86_64'}),
+      );
+      const arch = await system.arch();
+      assert.strictEqual(arch, '64');
+      mocks[SANDBOX].verify();
+    });
+
+    it('should return correct architecture if it is a 32 bit Mac/Linux', async function () {
+      mocks.os.expects('type').twice().returns('Linux');
+      (sandbox.stub(teen_process, 'exec') as any).get(() =>
+        sandbox.stub().withArgs('uname', ['-m']).returns({stdout: 'i686'}),
+      );
+      const arch = await system.arch();
+      assert.strictEqual(arch, '32');
+      mocks[SANDBOX].verify();
+    });
+
+    it('should return correct architecture if it is a 64 bit Windows', async function () {
+      mocks.os.expects('type').thrice().returns('Windows_NT');
+      mocks.system.expects('isOSWin64').once().returns(true);
+      const arch = await system.arch();
+      assert.strictEqual(arch, '64');
+      mocks[SANDBOX].verify();
+    });
+
+    it('should return correct architecture if it is a 32 bit Windows', async function () {
+      mocks.os.expects('type').thrice().returns('Windows_NT');
+      mocks.system.expects('isOSWin64').once().returns(false);
+      const arch = await system.arch();
+      assert.strictEqual(arch, '32');
+      mocks[SANDBOX].verify();
+    });
+  });
+
+  it('should know architecture', async function () {
+    await system.arch();
+  });
+});

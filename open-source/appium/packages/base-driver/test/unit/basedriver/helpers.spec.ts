@@ -1,0 +1,170 @@
+import assert from 'node:assert/strict';
+import {describe, it} from 'node:test';
+
+import {
+  duplicateKeys,
+  filenameFromContentDisposition,
+  isPackageOrBundle,
+  parseCapsArray,
+} from '../../../lib/basedriver/helpers';
+
+describe('helpers', function () {
+  describe('#isPackageOrBundle', function () {
+    it('should accept packages and bundles', function () {
+      assert.strictEqual(isPackageOrBundle('io.appium.testapp'), true);
+    });
+    it('should not accept non-packages or non-bundles', function () {
+      assert.strictEqual(isPackageOrBundle('foo'), false);
+      assert.strictEqual(isPackageOrBundle('/path/to/an.app'), false);
+      assert.strictEqual(isPackageOrBundle('/path/to/an.apk'), false);
+    });
+  });
+
+  describe('#duplicateKeys', function () {
+    it('should translate key in an object', function () {
+      assert.deepStrictEqual(duplicateKeys({foo: 'hello world'}, 'foo', 'bar'), {
+        foo: 'hello world',
+        bar: 'hello world',
+      });
+    });
+    it('should translate key in an object within an object', function () {
+      assert.deepStrictEqual(duplicateKeys({key: {foo: 'hello world'}}, 'foo', 'bar'), {
+        key: {foo: 'hello world', bar: 'hello world'},
+      });
+    });
+    it('should translate key in an object with an array', function () {
+      assert.deepStrictEqual(duplicateKeys([{key: {foo: 'hello world'}}, {foo: 'HELLO WORLD'}], 'foo', 'bar'), [
+        {key: {foo: 'hello world', bar: 'hello world'}},
+        {foo: 'HELLO WORLD', bar: 'HELLO WORLD'},
+      ]);
+    });
+    it('should duplicate both keys', function () {
+      assert.deepStrictEqual(
+        duplicateKeys(
+          {
+            keyOne: {
+              foo: 'hello world',
+            },
+            keyTwo: {
+              bar: 'HELLO WORLD',
+            },
+          },
+          'foo',
+          'bar',
+        ),
+        {
+          keyOne: {
+            foo: 'hello world',
+            bar: 'hello world',
+          },
+          keyTwo: {
+            bar: 'HELLO WORLD',
+            foo: 'HELLO WORLD',
+          },
+        },
+      );
+    });
+    it('should not do anything to primitives', function () {
+      [0, 1, -1, true, false, null, undefined, '', 'Hello World'].forEach((item) => {
+        assert.strictEqual((duplicateKeys as any)(item), item);
+      });
+    });
+    it('should rename keys on big complex objects', function () {
+      const input = [
+        {foo: 'bar'},
+        {
+          hello: {
+            world: {
+              foo: 'BAR',
+            },
+          },
+          foo: 'bahr',
+        },
+        'foo',
+        null,
+        0,
+      ];
+      const expectedOutput = [
+        {foo: 'bar', FOO: 'bar'},
+        {
+          hello: {
+            world: {
+              foo: 'BAR',
+              FOO: 'BAR',
+            },
+          },
+          foo: 'bahr',
+          FOO: 'bahr',
+        },
+        'foo',
+        null,
+        0,
+      ];
+      assert.deepStrictEqual(duplicateKeys(input as any, 'foo', 'FOO'), expectedOutput);
+    });
+  });
+});
+
+describe('parseCapsArray', function () {
+  it('should parse string into array', function () {
+    assert.deepStrictEqual(parseCapsArray('/tmp/my/app.zip'), ['/tmp/my/app.zip']);
+  });
+  it('should parse array as string into array', function () {
+    assert.deepStrictEqual(parseCapsArray('["/tmp/my/app.zip"]'), ['/tmp/my/app.zip']);
+    assert.deepStrictEqual(parseCapsArray('["/tmp/my/app.zip","/tmp/my/app2.zip"]'), [
+      '/tmp/my/app.zip',
+      '/tmp/my/app2.zip',
+    ]);
+  });
+  it('should return an array without change', function () {
+    assert.deepStrictEqual(parseCapsArray(['a', 'b']), ['a', 'b']);
+  });
+  it('should fail if an invalid JSON array is provided', function () {
+    assert.throws(() => parseCapsArray(`['*']`));
+  });
+});
+
+describe('filenameFromContentDisposition', function () {
+  it('should read a quoted filename', function () {
+    assert.strictEqual(filenameFromContentDisposition('attachment; filename="quoted-app.apk"'), 'quoted-app.apk');
+  });
+
+  it('should read an unquoted filename', function () {
+    assert.strictEqual(filenameFromContentDisposition('attachment; filename=unquoted-app.apk'), 'unquoted-app.apk');
+  });
+
+  it('should prefer RFC 5987 filename* over filename', function () {
+    assert.strictEqual(
+      filenameFromContentDisposition(`attachment; filename="wrong.apk"; filename*=UTF-8''from-star.apk`),
+      'from-star.apk',
+    );
+  });
+
+  it('should decode a percent-encoded filename*', function () {
+    assert.strictEqual(filenameFromContentDisposition(`attachment; filename*=UTF-8''My%20App.apk`), 'My App.apk');
+  });
+
+  it('should not let an unquoted token swallow later parameters', function () {
+    assert.strictEqual(filenameFromContentDisposition('attachment; filename=app.apk; size=42'), 'app.apk');
+  });
+
+  it('should keep a quoted filename containing a semicolon', function () {
+    assert.strictEqual(filenameFromContentDisposition('attachment; filename="a;b.apk"'), 'a;b.apk');
+  });
+
+  it('should ignore a parameter which merely ends with filename', function () {
+    assert.strictEqual(filenameFromContentDisposition('attachment; x-filename=sneaky.apk'), undefined);
+  });
+
+  it('should return undefined for an empty quoted filename', function () {
+    assert.strictEqual(filenameFromContentDisposition('attachment; filename=""'), undefined);
+  });
+
+  it('should return undefined when filename* is not decodable', function () {
+    assert.strictEqual(filenameFromContentDisposition(`attachment; filename*=UTF-8''%E0%A4%A`), undefined);
+  });
+
+  it('should return undefined when the header has no filename', function () {
+    assert.strictEqual(filenameFromContentDisposition('attachment'), undefined);
+  });
+});

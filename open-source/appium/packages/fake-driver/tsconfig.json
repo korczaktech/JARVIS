@@ -1,0 +1,30 @@
+{
+  "extends": "@appium/tsconfig/tsconfig.json",
+  "ts-node": {
+    "transpileOnly": true,
+    "compilerOptions": {
+      "rootDir": "."
+    }
+  },
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "build",
+    "checkJs": true,
+    "strict": true,
+    "types": ["node"],
+    "paths": {
+      "@appium/types": ["../types"],
+      "appium/support": ["../appium/support"],
+      "appium/driver": ["../appium/driver"],
+      "@appium/driver-test-support": ["../driver-test-support"]
+    }
+  },
+  "include": ["lib", "test"],
+  "references": [
+    {"path": "../base-driver"},
+    {"path": "../driver-test-support"},
+    {"path": "../logger"},
+    {"path": "../support"},
+    {"path": "../types"}
+  ]
+}
