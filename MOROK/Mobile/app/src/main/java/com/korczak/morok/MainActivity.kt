@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
     Text("MOROK",style=MaterialTheme.typography.headlineLarge);Text(status)
     OutlinedTextField(input,{input=it},Modifier.fillMaxWidth(),label={Text("Comando")},singleLine=true)
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={execute(input,CommandSource.TEXT)},enabled=input.isNotBlank()){Text("Executar")};OutlinedButton(onClick={listen}){Text("Ouvir")}}
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={execute("status",CommandSource.BUTTON)}){Text("Status")};OutlinedButton(onClick={execute("ajuda",CommandSource.BUTTON)}){Text("Ajuda")};OutlinedButton(onClick={ { startAssistantService() } }){Text("Serviço")}}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={execute("status",CommandSource.BUTTON)}){Text("Status")};OutlinedButton(onClick={execute("ajuda",CommandSource.BUTTON)}){Text("Ajuda")};OutlinedButton(onClick={startAssistantService()}){Text("Serviço")}}
    }}}
   }
  }
