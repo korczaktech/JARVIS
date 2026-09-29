@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - ".github/workflows/import-open-source.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
