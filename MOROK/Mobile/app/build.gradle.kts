@@ -50,3 +50,5 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.8")
 }
+
+// Phase 0 verification trigger.
