@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
  private fun execute(text:String,source:CommandSource){
   when(val result=router.route(text,source)){
    is CommandResult.Success->{status=result.message;speak(result.message);runAction(result.action)}
-   is CommandResult.RequiresConfirmation->{status=result.message+" Confirmação necessária.";speak(result.message);showConfirmation(result.message,result.action)}
+   is CommandResult.RequiresConfirmation->{status=result.message;speak(result.message);showConfirmation(result.message,result.action)}
    is CommandResult.NeedsPermission->{status="Permissão necessária: ${result.permission}"}
    is CommandResult.Failure->{status=result.message;speak(result.message)}
   }
