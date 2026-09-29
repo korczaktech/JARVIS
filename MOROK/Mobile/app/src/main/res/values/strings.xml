@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Morok</string>
+    <string name="service_channel_name">Morok em execução</string>
+    <string name="service_channel_description">Serviço local do assistente Morok.</string>
+</resources>
