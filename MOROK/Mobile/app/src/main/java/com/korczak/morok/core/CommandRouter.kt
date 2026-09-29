@@ -25,7 +25,7 @@ class CommandRouter {
    n.startsWith("brilho ")->parsePercent(n.removePrefix("brilho "),"brilho"){CommandAction.SetBrightness(it)}
    n in setOf("volume máximo","volume maximo")->CommandResult.Success("Volume no máximo.",CommandAction.SetVolume(100))
    n in setOf("volume mínimo","volume minimo")->CommandResult.Success("Volume no mínimo.",CommandAction.SetVolume(0))
-   n in setOf("abrir câmera","abrir camera","câmera","camera")->CommandResult.RequiresConfirmation("Abrir câmera?",CommandAction.OpenCamera)
+   n in setOf("abrir câmera","abrir camera","câmera","camera")->CommandResult.Success("Abrindo câmera.",CommandAction.OpenCamera)
    n in setOf("abrir calendário","abrir calendario","calendário","calendario")->CommandResult.Success("Abrindo calendário.",CommandAction.OpenCalendar)
    n in setOf("abrir contatos","contatos")->CommandResult.Success("Abrindo contatos.",CommandAction.OpenContacts)
    n in setOf("abrir arquivos","arquivos","gerenciador de arquivos")->CommandResult.Success("Abrindo arquivos.",CommandAction.OpenFiles)
@@ -51,7 +51,7 @@ class CommandRouter {
     val q=raw.substringAfter(' ').trim()
     if(q.isBlank()) CommandResult.Failure("Informe o que deseja pesquisar.") else CommandResult.Success("Pesquisando por $q.",CommandAction.OpenUrl("https://www.google.com/search?q="+URLEncoder.encode(q,"UTF-8")))
    }
-   n.startsWith("abrir ")->CommandResult.RequiresConfirmation("Abrir ${n.removePrefix("abrir ").trim()}?",CommandAction.None)
+   n.startsWith("abrir ")->CommandResult.Failure("Não encontrei esse destino. Diga o nome de um recurso, aplicativo ou endereço.")
    else->CommandResult.Failure("Não reconheci esse comando. Diga ajuda para ver os comandos básicos.")
   }
  }
