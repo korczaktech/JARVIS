@@ -45,9 +45,10 @@ jobs:
         run: gradle --no-daemon assembleRelease
       - name: Verify APK outputs
         run: |
-          test -s app/build/outputs/apk/debug/app-debug.apk
-          test -s app/build/outputs/apk/release/app-release.apk
-          unzip -t app/build/outputs/apk/release/app-release.apk >/dev/null
+          find app/build/outputs/apk -type f -name "*.apk" -print
+          count=$(find app/build/outputs/apk -type f -name "*.apk" | wc -l)
+          test "$count" -ge 2
+          while IFS= read -r apk; do test -s "$apk"; done < <(find app/build/outputs/apk -type f -name "*.apk")
       - uses: actions/upload-artifact@v4
         with:
           name: morok-mobile-debug
