@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
                     val text = matches?.firstOrNull()?.trim().orEmpty()
                     if (text.isNotEmpty()) {
                         webView.evaluateJavascript("window.MorokNative?.voiceResult("+JSONObject.quote(text)+");", null)
-                        routeCommand(text)
+                        NativeBridge().command(text)
                     } else {
                         notifyUi("Nenhum comando reconhecido.")
                     }
