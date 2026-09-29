@@ -33,6 +33,77 @@ jobs:
           while IFS='|' read -r source target; do
             echo "=== Cloning $source -> $target ==="
             git clone --recurse-submodules "https://github.com/$source.git" "/tmp/open-source-clones/$target"
+            if git -C "/tmp/open-source-clones/$target" lfs env >/dev/null 2>&1; then
+              git -C "/tmp/open-source-clones/$target" lfs install --local
+              git -C "/tmp/open-source-clones/$target" lfs pull || true
+              branch="$(git -C "/tmp/open-source-clones/$target" branch --show-current)"
+              while IFS= read -r path; do
+                [ -n "$path" ] || continue
+                if [ -f "/tmp/open-source-clones/$target/$path" ] && head -n 1 "/tmp/open-source-clones/$target/$path" | grep -q '^version https://git-lfs.github.com/spec/v1
+          done <<'REPOS'
+          langchain-ai/langgraph|langgraph
+          microsoft/autogen|autogen
+          crewAIInc/crewAI|crewAI
+          othersideai/self-operating-computer|self-operating-computer
+          openinterpreter/open-interpreter|open-interpreter
+          anthropics/anthropic-quickstarts|anthropic-quickstarts
+          ghost-in-the-droid/android-agent|android-agent
+          genymobile/scrcpy|scrcpy
+          appium/appium|appium
+          livekit/agents|agents
+          dscripka/openwakeword|openwakeword
+          SYSTRAN/faster-whisper|faster-whisper
+          flutter/flutter|flutter
+          shadcn-ui/ui|ui
+          fastapi/fastapi|fastapi
+          n8n-io/n8n|n8n
+          REPOS
+
+      - name: Replace placeholders with cloned contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p open-source
+          for dir in langgraph autogen crewAI self-operating-computer open-interpreter anthropic-quickstarts android-agent scrcpy appium agents openwakeword faster-whisper flutter ui fastapi n8n; do
+            rm -rf "open-source/$dir"
+            mkdir -p "open-source/$dir"
+            cp -a "/tmp/open-source-clones/$dir/." "open-source/$dir/"
+          done
+
+      - name: Verify imported repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in langgraph autogen crewAI self-operating-computer open-interpreter anthropic-quickstarts android-agent scrcpy appium agents openwakeword faster-whisper flutter ui fastapi n8n; do
+            test -d "open-source/$dir"
+            test "$(find "open-source/$dir" -type f | wc -l)" -gt 0
+            echo "OK: $dir — $(find "open-source/$dir" -type f | wc -l) files"
+          done
+
+      - name: Commit imported repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A open-source
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Import open-source repositories"
+          git push origin HEAD:main
+; then
+                  echo "Recovering LFS object: $source/$branch/$path"
+                  python - "$source" "$branch" "$path" "/tmp/open-source-clones/$target/$path" <<'PY'
+import sys
+import urllib.parse
+import urllib.request
+source, branch, path, output = sys.argv[1:]
+url = "https://media.githubusercontent.com/media/" + source + "/" + urllib.parse.quote(branch, safe="") + "/" + urllib.parse.quote(path, safe="/")
+urllib.request.urlretrieve(url, output)
+PY
+                fi
+              done < <(git -C "/tmp/open-source-clones/$target" lfs ls-files -n || true)
+            fi
             rm -rf "/tmp/open-source-clones/$target/.git"
           done <<'REPOS'
           langchain-ai/langgraph|langgraph
