@@ -10,6 +10,7 @@ import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
 import android.speech.*
+import android.speech.tts.TextToSpeech
 import android.telephony.PhoneNumberUtils
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,7 +42,7 @@ class MainActivity : ComponentActivity() {
     Text("MOROK",style=MaterialTheme.typography.headlineLarge);Text(status)
     OutlinedTextField(input,{input=it},Modifier.fillMaxWidth(),label={Text("Comando")},singleLine=true)
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={execute(input,CommandSource.TEXT)},enabled=input.isNotBlank()){Text("Executar")};OutlinedButton(onClick={listen}){Text("Ouvir")}}
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={execute("status",CommandSource.BUTTON)}){Text("Status")};OutlinedButton(onClick={execute("ajuda",CommandSource.BUTTON)}){Text("Ajuda")};OutlinedButton(onClick={startAssistantService}){Text("Serviço")}}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={execute("status",CommandSource.BUTTON)}){Text("Status")};OutlinedButton(onClick={execute("ajuda",CommandSource.BUTTON)}){Text("Ajuda")};OutlinedButton(onClick={ { startAssistantService() } }){Text("Serviço")}}
    }}}
   }
  }
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
    is CommandResult.Failure->{status=result.message;speak(result.message)}
   }
  }
- private fun showConfirmation(message:String,action:CommandAction){AlertDialog.Builder(this).setTitle("Confirmar ação").setMessage(message).setNegativeButton("Cancelar",null).setPositiveButton("Confirmar"){_,_->runAction(action)}.show()}
+ private fun showConfirmation(message:String,action:CommandAction){android.app.AlertDialog.Builder(this).setTitle("Confirmar ação").setMessage(message).setNegativeButton("Cancelar",null).setPositiveButton("Confirmar"){_,_->runAction(action)}.show()}
  private fun runAction(action:CommandAction){
   try{when(action){
    CommandAction.None->Unit
