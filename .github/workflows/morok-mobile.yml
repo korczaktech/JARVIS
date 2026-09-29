@@ -5,7 +5,7 @@ on:
     paths: ["MOROK/Mobile/**", ".github/workflows/morok-mobile.yml"]
   pull_request:
     paths: ["MOROK/Mobile/**", ".github/workflows/morok-mobile.yml"]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
