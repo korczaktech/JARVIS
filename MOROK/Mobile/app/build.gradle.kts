@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.devtools.ksp")
 }
 android {
     namespace = "com.korczak.morok"
@@ -15,11 +16,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
+    signingConfigs {
+        create("ciRelease") {
+            val p = System.getenv("MOROK_KEYSTORE_FILE")
+            if (!p.isNullOrBlank()) {
+                storeFile = file(p)
+                storePassword = System.getenv("MOROK_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("MOROK_KEY_ALIAS")
+                keyPassword = System.getenv("MOROK_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (!System.getenv("MOROK_KEYSTORE_FILE").isNullOrBlank()) signingConfig = signingConfigs.getByName("ciRelease")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -43,6 +56,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     debugImplementation("androidx.compose.ui:ui-tooling:1.7.8")
     testImplementation("junit:junit:4.13.2")
@@ -50,5 +64,3 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.8")
 }
-
-// Phase 0 verification trigger.
