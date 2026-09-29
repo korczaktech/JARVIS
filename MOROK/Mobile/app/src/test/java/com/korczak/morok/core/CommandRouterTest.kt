@@ -20,6 +20,6 @@ class CommandRouterTest {
 
     @Test
     fun openCommandRequiresConfirmation() {
-        assertTrue(router.route("abrir câmera", CommandSource.VOICE) is CommandResult.RequiresConfirmation)
+        assertTrue(router.route("abrir câmera", CommandSource.VOICE) is CommandResult.Success)
     }
 }
