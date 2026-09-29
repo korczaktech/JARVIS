@@ -51,7 +51,7 @@ class CommandRouter {
     val q=raw.substringAfter(' ').trim()
     if(q.isBlank()) CommandResult.Failure("Informe o que deseja pesquisar.") else CommandResult.Success("Pesquisando por $q.",CommandAction.OpenUrl("https://www.google.com/search?q="+URLEncoder.encode(q,"UTF-8")))
    }
-   else->CommandResult.Failure("Não reconheci esse comando. Diga "ajuda" para ver os comandos básicos.")
+   else->CommandResult.Failure("Não reconheci esse comando. Diga ajuda para ver os comandos básicos.")
   }
  }
  private fun parsePercent(value:String,label:String,action:(Int)->CommandAction):CommandResult {
