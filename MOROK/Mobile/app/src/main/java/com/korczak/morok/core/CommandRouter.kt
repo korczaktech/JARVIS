@@ -25,7 +25,7 @@ class CommandRouter {
    n.startsWith("brilho ")->parsePercent(n.removePrefix("brilho "),"brilho"){CommandAction.SetBrightness(it)}
    n in setOf("volume máximo","volume maximo")->CommandResult.Success("Volume no máximo.",CommandAction.SetVolume(100))
    n in setOf("volume mínimo","volume minimo")->CommandResult.Success("Volume no mínimo.",CommandAction.SetVolume(0))
-   n in setOf("abrir câmera","abrir camera","câmera","camera")->CommandResult.Success("Abrindo câmera.",CommandAction.OpenCamera)
+   n in setOf("abrir câmera","abrir camera","câmera","camera")->CommandResult.RequiresConfirmation("Abrir câmera?",CommandAction.OpenCamera)
    n in setOf("abrir calendário","abrir calendario","calendário","calendario")->CommandResult.Success("Abrindo calendário.",CommandAction.OpenCalendar)
    n in setOf("abrir contatos","contatos")->CommandResult.Success("Abrindo contatos.",CommandAction.OpenContacts)
    n in setOf("abrir arquivos","arquivos","gerenciador de arquivos")->CommandResult.Success("Abrindo arquivos.",CommandAction.OpenFiles)
