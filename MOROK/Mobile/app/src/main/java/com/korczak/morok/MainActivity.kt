@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
                     val text = matches?.firstOrNull()?.trim().orEmpty()
                     if (text.isNotEmpty()) {
                         webView.evaluateJavascript("window.MorokNative?.voiceResult("+JSONObject.quote(text)+");", null)
-                        command(text)
+                        routeCommand(text)
                     } else {
                         notifyUi("Nenhum comando reconhecido.")
                     }
@@ -127,8 +127,7 @@ class MainActivity : ComponentActivity() {
             }.toString()
         }
 
-        @JavascriptInterface
-        fun command(text: String): String {
+        private fun routeCommand(text: String): String {
             val result = router.route(text, CommandSource.VOICE)
             val message = when (result) {
                 is CommandResult.Success -> result.message
@@ -139,6 +138,9 @@ class MainActivity : ComponentActivity() {
             notifyUi(message)
             return message
         }
+
+        @JavascriptInterface
+        fun command(text: String): String = routeCommand(text)
 
         @JavascriptInterface fun startService() = startAssistantService()
         @JavascriptInterface fun stopService() = stopService(Intent(this@MainActivity, MorokForegroundService::class.java))
