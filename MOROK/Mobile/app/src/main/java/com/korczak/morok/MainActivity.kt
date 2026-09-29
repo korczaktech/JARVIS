@@ -1,159 +1,96 @@
 package com.korczak.morok
-
 import android.Manifest
+import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.media.AudioManager
+import android.net.Uri
 import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.provider.CalendarContract
+import android.provider.ContactsContract
+import android.provider.MediaStore
+import android.provider.Settings
+import android.speech.*
+import android.telephony.PhoneNumberUtils
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.korczak.morok.core.CommandResult
-import com.korczak.morok.core.CommandRouter
-import com.korczak.morok.core.CommandSource
+import com.korczak.morok.core.*
 import com.korczak.morok.service.MorokForegroundService
-import org.json.JSONObject
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
-    private val router = CommandRouter()
-    private lateinit var webView: WebView
-    private var speechRecognizer: SpeechRecognizer? = null
-
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        if (::webView.isInitialized) {
-            val granted = results.values.all { it }
-            webView.evaluateJavascript("window.MorokNative?.permissionsResult("+granted+");", null)
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        webView = WebView(this).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = true
-            settings.allowContentAccess = true
-            webViewClient = WebViewClient()
-            webChromeClient = WebChromeClient()
-            addJavascriptInterface(NativeBridge(), "MorokNative")
-            setBackgroundColor(android.graphics.Color.BLACK)
-        }
-        setContentView(webView)
-        webView.loadUrl("file:///android_asset/frontend/index.html")
-        requestBasePermissions()
-    }
-
-    private fun requestBasePermissions() {
-        val permissions = buildList {
-            add(Manifest.permission.RECORD_AUDIO)
-            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        permissionLauncher.launch(permissions.toTypedArray())
-    }
-
-    private fun startAssistantService() {
-        ContextCompat.startForegroundService(this, Intent(this, MorokForegroundService::class.java))
-    }
-
-    private fun startVoiceRecognition() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            notifyUi("Reconhecimento de voz indisponível neste dispositivo.")
-            return
-        }
-        speechRecognizer?.destroy()
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).also { recognizer ->
-            recognizer.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) = notifyUi("Escutando…")
-                override fun onBeginningOfSpeech() = Unit
-                override fun onRmsChanged(rmsdB: Float) = Unit
-                override fun onBufferReceived(buffer: ByteArray?) = Unit
-                override fun onEndOfSpeech() = Unit
-                override fun onError(error: Int) = notifyUi("Não foi possível reconhecer o comando.")
-                override fun onResults(results: Bundle?) {
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    val text = matches?.firstOrNull()?.trim().orEmpty()
-                    if (text.isNotEmpty()) {
-                        webView.evaluateJavascript("window.MorokNative?.voiceResult("+JSONObject.quote(text)+");", null)
-                        NativeBridge().command(text)
-                    } else {
-                        notifyUi("Nenhum comando reconhecido.")
-                    }
-                }
-                override fun onPartialResults(partialResults: Bundle?) = Unit
-                override fun onEvent(eventType: Int, params: Bundle?) = Unit
-            })
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-            }
-            recognizer.startListening(intent)
-        }
-    }
-
-    private fun notifyUi(message: String) {
-        if (::webView.isInitialized) {
-            webView.post {
-                webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(message)+");", null)
-            }
-        }
-    }
-
-    inner class NativeBridge {
-        @JavascriptInterface
-        fun deviceInfo(): String {
-            val bm = getSystemService(BATTERY_SERVICE) as android.os.BatteryManager
-            val battery = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
-            val intent = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val charging = intent?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) in listOf(
-                android.os.BatteryManager.BATTERY_STATUS_CHARGING,
-                android.os.BatteryManager.BATTERY_STATUS_FULL
-            )
-            return JSONObject().apply {
-                put("battery", battery)
-                put("charging", charging)
-                put("sdk", Build.VERSION.SDK_INT)
-                put("model", Build.MODEL)
-            }.toString()
-        }
-
-        private fun routeCommand(text: String): String {
-            val result = router.route(text, CommandSource.VOICE)
-            val message = when (result) {
-                is CommandResult.Success -> result.message
-                is CommandResult.RequiresConfirmation -> "Confirmação necessária."
-                is CommandResult.NeedsPermission -> "Permissão necessária: " + result.permission
-                is CommandResult.Failure -> result.message
-            }
-            notifyUi(message)
-            return message
-        }
-
-        @JavascriptInterface
-        fun command(text: String): String = routeCommand(text)
-
-        @JavascriptInterface fun startService() = startAssistantService()
-        @JavascriptInterface fun stopService() = stopService(Intent(this@MainActivity, MorokForegroundService::class.java))
-        @JavascriptInterface fun requestPermissions() = requestBasePermissions()
-        @JavascriptInterface fun startVoice() = runOnUiThread { startVoiceRecognition() }
-        @JavascriptInterface fun stopVoice() = speechRecognizer?.stopListening()
-    }
-
-    override fun onDestroy() {
-        speechRecognizer?.destroy()
-        speechRecognizer = null
-        webView.removeJavascriptInterface("MorokNative")
-        webView.destroy()
-        super.onDestroy()
-    }
+ private val router=CommandRouter()
+ private var status by mutableStateOf("Morok pronto.")
+ private var input by mutableStateOf("")
+ private var speechRecognizer:SpeechRecognizer?=null
+ private var tts:TextToSpeech?=null
+ private val permissionLauncher=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){r->status=if(r.values.all{it})"Permissões concedidas." else "Algumas permissões não foram concedidas."}
+ override fun onCreate(savedInstanceState:Bundle?){
+  super.onCreate(savedInstanceState)
+  tts=TextToSpeech(this){if(it==TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")}
+  requestBasePermissions()
+  setContent{
+   MaterialTheme{Surface(Modifier.fillMaxSize()){Column(Modifier.fillMaxSize().padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    Text("MOROK",style=MaterialTheme.typography.headlineLarge);Text(status)
+    OutlinedTextField(input,{input=it},Modifier.fillMaxWidth(),label={Text("Comando")},singleLine=true)
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={execute(input,CommandSource.TEXT)},enabled=input.isNotBlank()){Text("Executar")};OutlinedButton(onClick={listen}){Text("Ouvir")}}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={execute("status",CommandSource.BUTTON)}){Text("Status")};OutlinedButton(onClick={execute("ajuda",CommandSource.BUTTON)}){Text("Ajuda")};OutlinedButton(onClick={startAssistantService}){Text("Serviço")}}
+   }}}
+  }
+ }
+ private fun requestBasePermissions(){val p=mutableListOf(Manifest.permission.RECORD_AUDIO);if(android.os.Build.VERSION.SDK_INT>=33)p+=Manifest.permission.POST_NOTIFICATIONS;permissionLauncher.launch(p.toTypedArray())}
+ private fun execute(text:String,source:CommandSource){
+  when(val result=router.route(text,source)){
+   is CommandResult.Success->{status=result.message;speak(result.message);runAction(result.action)}
+   is CommandResult.RequiresConfirmation->{status=result.message+" Confirmação necessária.";speak(result.message);showConfirmation(result.message,result.action)}
+   is CommandResult.NeedsPermission->{status="Permissão necessária: ${result.permission}"}
+   is CommandResult.Failure->{status=result.message;speak(result.message)}
+  }
+ }
+ private fun showConfirmation(message:String,action:CommandAction){AlertDialog.Builder(this).setTitle("Confirmar ação").setMessage(message).setNegativeButton("Cancelar",null).setPositiveButton("Confirmar"){_,_->runAction(action)}.show()}
+ private fun runAction(action:CommandAction){
+  try{when(action){
+   CommandAction.None->Unit
+   CommandAction.OpenSettings->open(Settings.ACTION_SETTINGS)
+   CommandAction.OpenWifiSettings->open(Settings.ACTION_WIFI_SETTINGS)
+   CommandAction.OpenBluetoothSettings->open(Settings.ACTION_BLUETOOTH_SETTINGS)
+   CommandAction.OpenLocationSettings->open(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+   CommandAction.OpenAccessibilitySettings->open(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+   CommandAction.OpenAppSettings->open(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName"))
+   CommandAction.OpenDateSettings,CommandAction.OpenTimeSettings->open(Settings.ACTION_DATE_SETTINGS)
+   CommandAction.OpenNotifications->open(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+   CommandAction.FlashlightOn->setFlashlight(true)
+   CommandAction.FlashlightOff->setFlashlight(false)
+   is CommandAction.SetVolume->setVolume(action.percent)
+   is CommandAction.SetBrightness->setBrightness(action.percent)
+   is CommandAction.OpenUrl->open(Intent(Intent.ACTION_VIEW,Uri.parse(action.url)))
+   CommandAction.OpenCamera->open(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
+   CommandAction.OpenCalendar->open(Intent(Intent.ACTION_VIEW,CalendarContract.CONTENT_URI))
+   CommandAction.OpenContacts->open(Intent(Intent.ACTION_VIEW,ContactsContract.Contacts.CONTENT_URI))
+   CommandAction.OpenFiles->open(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="*/*";addCategory(Intent.CATEGORY_OPENABLE)})
+   is CommandAction.Dial->open(Intent(Intent.ACTION_DIAL,Uri.parse("tel:"+PhoneNumberUtils.normalizeNumber(action.number))))
+   is CommandAction.SendSms->open(Intent(Intent.ACTION_SENDTO).apply{data=Uri.parse("smsto:${action.number ?: ""}");putExtra("sms_body",action.body)})
+  }}catch(e:Exception){status="Não foi possível executar: ${e.message ?: "erro desconhecido"}"}
+ }
+ private fun open(action:String){startActivity(Intent(action))}
+ private fun open(action:String,uri:Uri){startActivity(Intent(action,uri))}
+ private fun open(intent:Intent){startActivity(intent)}
+ private fun setVolume(percent:Int){val am=getSystemService(AudioManager::class.java);val max=am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);am.setStreamVolume(AudioManager.STREAM_MUSIC,(max*percent/100.0).roundToInt(),0)}
+ private fun setBrightness(percent:Int){if(!Settings.System.canWrite(this)){status="Permissão para alterar brilho necessária.";open(Settings.ACTION_MANAGE_WRITE_SETTINGS,Uri.parse("package:$packageName"));return};Settings.System.putInt(contentResolver,Settings.System.SCREEN_BRIGHTNESS,(255*percent/100.0).roundToInt())}
+ private fun setFlashlight(on:Boolean){val cm=getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager;val id=cm.cameraIdList.firstOrNull{cm.getCameraCharacteristics(it).get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE)==true}?:throw IllegalStateException("Este aparelho não possui flash.");cm.setTorchMode(id,on)}
+ private fun listen(){if(!SpeechRecognizer.isRecognitionAvailable(this)){status="Reconhecimento de voz indisponível.";return};speechRecognizer?.destroy();speechRecognizer=SpeechRecognizer.createSpeechRecognizer(this).also{sr->sr.setRecognitionListener(object:RecognitionListener{
+  override fun onReadyForSpeech(p:Bundle?){status="Ouvindo..."};override fun onBeginningOfSpeech(){status="Falando..."};override fun onEndOfSpeech(){};override fun onError(error:Int){status="Não consegui entender o áudio. Código: $error"}
+  override fun onResults(results:Bundle?){val text=results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?:return;input=text;execute(text,CommandSource.VOICE)}
+  override fun onRmsChanged(v:Float){};override fun onBufferReceived(b:ByteArray?){};override fun onPartialResults(b:Bundle?){};override fun onEvent(t:Int,p:Bundle?){}
+ });sr.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);putExtra(RecognizerIntent.EXTRA_LANGUAGE,"pt-BR");putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3)})}}
+ private fun speak(text:String){tts?.speak(text,TextToSpeech.QUEUE_FLUSH,null,"morok-response")}
+ private fun startAssistantService(){ContextCompat.startForegroundService(this,Intent(this,MorokForegroundService::class.java));status="Serviço do Morok iniciado."}
+ override fun onDestroy(){speechRecognizer?.destroy();tts?.shutdown();super.onDestroy()}
 }
