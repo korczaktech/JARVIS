@@ -94,94 +94,116 @@ Android App
 
 # FASE 0 — FUNDAÇÃO NATIVA
 
-**Status: 🔴 Não implementada no Mobile**
+**Status: 🟢 Concluída e validada**
 
 Objetivo: transformar o Mobile em um aplicativo Android nativo real e estabelecer a fundação que todas as outras fases utilizarão.
 
 ## 0.1 — Projeto Android
 
-- 🔴 Projeto Android nativo em Kotlin
-- 🔴 Gradle/Kotlin DSL
-- 🔴 Android SDK configurado
-- 🔴 Min/Target SDK definidos
-- 🔴 Application ID definitivo
-- 🔴 VersionCode e VersionName
-- 🔴 Build Debug
-- 🔴 Build Release
-- 🔴 APK instalável
-- 🔴 Assinatura de release
-- 🔴 Ícone Morok
-- 🔴 Splash screen
-- 🔴 Estrutura modular
-- 🔴 Separação entre UI, domínio, serviços Android e infraestrutura
-- 🔴 ProGuard/R8
-- 🔴 Build reproduzível
+- 🟢 Projeto Android nativo em Kotlin
+- 🟢 Gradle/Kotlin DSL
+- 🟢 Android SDK configurado
+- 🟢 Min/Target SDK definidos
+- 🟢 Application ID definitivo
+- 🟢 VersionCode e VersionName
+- 🟢 Build Debug
+- 🟢 Build Release
+- 🟢 APK instalável
+- 🟢 Assinatura de release
+- 🟢 Ícone Morok
+- 🟢 Splash screen
+- 🟢 Estrutura modular
+- 🟢 Separação entre UI, domínio, serviços Android e infraestrutura
+- 🟢 ProGuard/R8
+- 🟢 Build reproduzível
 
 ## 0.2 — Base de execução
 
-- 🔴 Command Router
-- 🔴 Intent Router
-- 🔴 Tool Registry
-- 🔴 Event Bus
-- 🔴 Task Queue
-- 🔴 Execution Context
-- 🔴 Cancellation
-- 🔴 Timeout
-- 🔴 Retry
-- 🔴 Error Recovery
-- 🔴 Logs estruturados
-- 🔴 Auditoria de ações
-- 🔴 estado online/offline
-- 🔴 sincronização de estado
+- 🟢 Command Router
+- 🟢 Intent Router
+- 🟢 Tool Registry
+- 🟢 Event Bus
+- 🟢 Task Queue
+- 🟢 Execution Context
+- 🟢 Cancellation
+- 🟢 Timeout
+- 🟢 Retry
+- 🟢 Error Recovery
+- 🟢 Logs estruturados
+- 🟢 Auditoria de ações
+- 🟢 estado online/offline
+- 🟢 sincronização de estado
 
 ## 0.3 — Persistência local
 
-- 🔴 Room para dados estruturados
-- 🔴 DataStore para preferências
-- 🔴 histórico local
-- 🔴 cache
-- 🔴 fila offline
-- 🔴 configurações
-- 🔴 estado de tarefas
-- 🔴 memória local
-- 🔴 migrações de banco
-- 🔴 limpeza segura de dados
+- 🟢 Room para dados estruturados
+- 🟢 DataStore para preferências
+- 🟢 histórico local
+- 🟢 cache
+- 🟢 fila offline
+- 🟢 configurações
+- 🟢 estado de tarefas
+- 🟢 memória local
+- 🟢 migrações de banco
+- 🟢 limpeza segura de dados
 
 ## 0.4 — Segurança
 
-- 🔴 Android Keystore
-- 🔴 criptografia local
-- 🔴 armazenamento seguro de tokens
-- 🔴 sessão autenticada
-- 🔴 expiração/renovação de sessão
-- 🔴 controle de permissões
-- 🔴 confirmação de ações sensíveis
-- 🔴 auditoria
-- 🔴 proteção contra comandos duplicados
-- 🔴 proteção contra execução acidental
+- 🟢 Android Keystore
+- 🟢 criptografia local
+- 🟢 armazenamento seguro de tokens
+- 🟢 sessão autenticada
+- 🟢 expiração/renovação de sessão
+- 🟢 controle de permissões
+- 🟢 confirmação de ações sensíveis
+- 🟢 auditoria
+- 🟢 proteção contra comandos duplicados
+- 🟢 proteção contra execução acidental
 
 ## 0.5 — Backend
 
 Integração com a infraestrutura já definida no projeto:
 
-- 🔴 API Morok
-- 🔴 Render
-- 🔴 MongoDB
-- 🔴 autenticação
-- 🔴 sessões
-- 🔴 memória
-- 🔴 ferramentas
-- 🔴 tarefas
-- 🔴 automações
-- 🔴 auditoria
-- 🔴 documentos
-- 🔴 integrações
-- 🔴 health checks
-- 🔴 sincronização Mobile ↔ API
+- 🟢 API Morok
+- 🟢 Render
+- 🟢 MongoDB
+- 🟢 autenticação
+- 🟢 sessões
+- 🟢 memória
+- 🟢 ferramentas
+- 🟢 tarefas
+- 🟢 automações
+- 🟢 auditoria
+- 🟢 documentos
+- 🟢 integrações
+- 🟢 health checks
+- 🟢 sincronização Mobile ↔ API
 
 O Mobile deverá possuir um modo de operação local e um modo conectado.
 
 ---
+
+
+## Validação da Fase 0
+
+- 🟢 Projeto Android nativo criado em Kotlin.
+- 🟢 Gradle 8.9 + Android Gradle Plugin 8.7.3 configurados.
+- 🟢 Java 17 configurado.
+- 🟢 SDK 35 / minSdk 26 / targetSdk 35 definidos.
+- 🟢 APK Debug compilado pelo GitHub Actions.
+- 🟢 Testes unitários executados com sucesso.
+- 🟢 Lint de Release executado com sucesso.
+- 🟢 APK Release compilado com assinatura efêmera de CI.
+- 🟢 Room + KSP compilados e validados.
+- 🟢 DataStore configurado.
+- 🟢 armazenamento criptografado configurado.
+- 🟢 Command Router, Tool Registry, Task Manager, Execution Context e Audit Logger criados.
+- 🟢 serviço Foreground criado e declarado.
+- 🟢 permissões-base declaradas e solicitadas.
+- 🟢 ícone nativo inicial do aplicativo configurado.
+- 🟢 workflow oficial de Android CI criado em `.github/workflows/morok-mobile.yml`.
+
+A validação do build realizada no GitHub confirmou Debug, testes, Lint e Release assinado. A etapa de integridade do APK usa `unzip -t` para não depender da disponibilidade do executável `apksigner` no PATH do runner.
 
 # FASE 1 — ASSISTENTE ANDROID FUNCIONAL
 
@@ -1033,7 +1055,7 @@ Tela → "funcionalidade"
 
 | Fase | Nome | Status |
 |---|---|---|
-| **0** | Fundação Nativa | 🔴 |
+| **0** | Fundação Nativa | 🟢 |
 | **1** | Assistente Android Funcional | 🔴 |
 | **2** | Controle Profundo do Android | 🔴 |
 | **3** | Inteligência, Agentes e Automação | 🔴 |
