@@ -58,3 +58,5 @@ test -x "$APKSIGNER"
         with:
           name: morok-mobile-release
           path: MOROK/Mobile/app/build/outputs/apk/release/*.apk
+
+# Final verification trigger.
