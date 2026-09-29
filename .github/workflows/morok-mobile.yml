@@ -2,13 +2,9 @@ name: Morok Mobile Android
 
 on:
   push:
-    paths:
-      - "MOROK/Mobile/**"
-      - ".github/workflows/morok-mobile.yml"
+    paths: ["MOROK/Mobile/**", ".github/workflows/morok-mobile.yml"]
   pull_request:
-    paths:
-      - "MOROK/Mobile/**"
-      - ".github/workflows/morok-mobile.yml"
+    paths: ["MOROK/Mobile/**", ".github/workflows/morok-mobile.yml"]
   workflow_dispatch:
 
 permissions:
@@ -21,41 +17,42 @@ jobs:
       run:
         working-directory: MOROK/Mobile
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
-
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-
       - name: Compile debug
         run: gradle --no-daemon assembleDebug
-
       - name: Unit tests
         run: gradle --no-daemon test
-
       - name: Lint release
         run: gradle --no-daemon lintRelease
-
-      - name: Compile release
+      - name: Create ephemeral CI signing key
+        working-directory: MOROK/Mobile
+        run: |
+          keytool -genkeypair -v -keystore "$RUNNER_TEMP/morok-ci.jks" -storepass "morok-ci-password" -keypass "morok-ci-password" -alias "morok-ci" -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Morok CI, OU=Build, O=Korczak Technology, L=CI, ST=CI, C=BR"
+      - name: Compile signed release
+        env:
+          MOROK_KEYSTORE_FILE: ${{ runner.temp }}/morok-ci.jks
+          MOROK_KEYSTORE_PASSWORD: morok-ci-password
+          MOROK_KEY_ALIAS: morok-ci
+          MOROK_KEY_PASSWORD: morok-ci-password
         run: gradle --no-daemon assembleRelease
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+      - name: Verify APK outputs
+        run: |
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s app/build/outputs/apk/release/app-release.apk
+          apksigner verify --verbose app/build/outputs/apk/release/app-release.apk
+      - uses: actions/upload-artifact@v4
         with:
           name: morok-mobile-debug
           path: MOROK/Mobile/app/build/outputs/apk/debug/*.apk
-
-      - name: Upload release APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: morok-mobile-release
           path: MOROK/Mobile/app/build/outputs/apk/release/*.apk
