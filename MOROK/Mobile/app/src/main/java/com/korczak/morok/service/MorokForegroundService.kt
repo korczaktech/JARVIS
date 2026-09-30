@@ -56,7 +56,8 @@ class MorokForegroundService:Service(){
   try{recognizer?.startListening(i)}catch(_:Exception){restart()}
  }
  private fun restart(){Handler(Looper.getMainLooper()).postDelayed({if(listening)listenNow()},450)}
- private fun isWake(s:String)=Regex("^\\s*morok\\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
+ private fun isWake(s:String)=Regex("^\\s*(?:ok\\s+|hey\\s+|hello\\s+)?morok\\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
+ private fun wakeCommand(s:String)=s.trim().replaceFirst(Regex("^\\s*(?:ok\\s+|hey\\s+|hello\\s+)?morok\\s*(?:,|:|-)?\\s*",RegexOption.IGNORE_CASE),"").replaceFirst(Regex("^acorde\\s*",RegexOption.IGNORE_CASE),"").trim()
  private fun handle(s:String?){
   if(s.isNullOrBlank())return
   val activeWake=isWake(s)
@@ -64,7 +65,7 @@ class MorokForegroundService:Service(){
   val command=if(activeWake) wakeCommand(s) else s.trim()
   if(activeWake&&command.isBlank()){awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");return}
   awaitingCommand=false
-  if(android.os.Build.VERSION.SDK_INT>=23 && android.provider.Settings.canDrawOverlays(this)) startService(Intent(this,MorokOverlayService::class.java).putExtra(MorokOverlayService.EXTRA_COMMAND, if(command.isBlank()) "MOROK\nEstou ouvindo…" else "MOROK\n"+command))
+  showOverlay("MOROK\n"+command)
   val result=router.route(command,CommandSource.VOICE)
   when(result){
    is CommandResult.Success->{execute(result.action);broadcast(result.message);speak(result.message)}
