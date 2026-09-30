@@ -54,7 +54,7 @@ class MorokForegroundService:Service(){
   try{recognizer?.startListening(i)}catch(_:Exception){restart()}
  }
  private fun restart(){Handler(Looper.getMainLooper()).postDelayed({if(listening)listenNow()},450)}
- private fun isWake(s:String)=Regex("^\s*morok\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
+ private fun isWake(s:String)=Regex("^\\s*morok\\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
  private fun handle(s:String?){
   if(s.isNullOrBlank()||!isWake(s))return
   val result=router.route(s,CommandSource.VOICE)
