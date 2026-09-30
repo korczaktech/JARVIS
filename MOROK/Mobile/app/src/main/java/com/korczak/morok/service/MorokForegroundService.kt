@@ -53,7 +53,7 @@ class MorokForegroundService:Service(){
     override fun onError(e:Int){if(localGeneration!=generation||!listening)return;consecutiveErrors++;broadcast("ASR_ERROR:$e:"+errorName(e));scheduleRestart(if(e==SpeechRecognizer.ERROR_RECOGNIZER_BUSY)1000 else 600)}
     override fun onReadyForSpeech(p:Bundle?){if(localGeneration==generation&&listening)broadcast("MIC_OK:Reconhecedor pronto.")}
     override fun onBeginningOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fala detectada.")}
-    override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;val now=SystemClock.elapsedRealtime();if(now-lastLevelBroadcastAt>=300){lastLevelBroadcastAt=now;broadcast("MIC_LEVEL:"+((v.coerceIn(-10f,10f)+10f)*5f).toInt())}}}
+    override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;val now=SystemClock.elapsedRealtime();if(now-lastLevelBroadcastAt>=300){lastLevelBroadcastAt=now;broadcast("MIC_LEVEL:"+((v.coerceIn(-10f,10f)+10f)*5f).toInt()+":"+v)}}}
     override fun onBufferReceived(b:ByteArray?){if(localGeneration==generation&&listening&&b!=null&&b.isNotEmpty())broadcast("MIC_BUFFER:"+b.size)}
     override fun onEndOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fim da fala.")}
     override fun onPartialResults(b:Bundle) {
