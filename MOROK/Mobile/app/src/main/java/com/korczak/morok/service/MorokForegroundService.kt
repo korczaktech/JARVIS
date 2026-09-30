@@ -18,9 +18,11 @@ class MorokForegroundService:Service(){
  private val router=CommandRouter()
  private var recognizer:SpeechRecognizer?=null
  private var listening=false
- override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());startListening()}
+ private var awaitingCommand=false
+ private var tts:android.speech.tts.TextToSpeech?=null
+ override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")};startListening()}
  override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{if(!listening)startListening();return START_STICKY}
- override fun onDestroy(){listening=false;recognizer?.destroy();recognizer=null;super.onDestroy()}
+ override fun onDestroy(){listening=false;recognizer?.destroy();recognizer=null;tts?.shutdown();tts=null;super.onDestroy()}
  override fun onBind(i:Intent?):IBinder?=null
  private fun notification():Notification=NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle(getString(R.string.app_name)).setContentText("Morok ouvindo “Morok” em segundo plano.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setOngoing(true).build()
  private fun startListening(){
@@ -56,17 +58,23 @@ class MorokForegroundService:Service(){
  private fun restart(){Handler(Looper.getMainLooper()).postDelayed({if(listening)listenNow()},450)}
  private fun isWake(s:String)=Regex("^\\s*morok\\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
  private fun handle(s:String?){
-  if(s.isNullOrBlank()||!isWake(s))return
-  val command=wakeCommand(s)
+  if(s.isNullOrBlank())return
+  val activeWake=isWake(s)
+  if(!activeWake&&!awaitingCommand)return
+  val command=if(activeWake) wakeCommand(s) else s.trim()
+  if(activeWake&&command.isBlank()){awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");return}
+  awaitingCommand=false
   if(android.os.Build.VERSION.SDK_INT>=23 && android.provider.Settings.canDrawOverlays(this)) startService(Intent(this,MorokOverlayService::class.java).putExtra(MorokOverlayService.EXTRA_COMMAND, if(command.isBlank()) "MOROK\nEstou ouvindo…" else "MOROK\n"+command))
   val result=router.route(command,CommandSource.VOICE)
   when(result){
-   is CommandResult.Success->{execute(result.action);broadcast(result.message)}
+   is CommandResult.Success->{execute(result.action);broadcast(result.message);speak(result.message)}
    is CommandResult.RequiresConfirmation->broadcast("Confirmação necessária: "+result.message)
-   is CommandResult.Failure->broadcast(result.message)
+   is CommandResult.Failure->{broadcast(result.message);speak(result.message)}
    is CommandResult.NeedsPermission->broadcast("Permissão necessária: "+result.permission)
   }
  }
+ private fun showOverlay(t:String){if(android.os.Build.VERSION.SDK_INT<23||android.provider.Settings.canDrawOverlays(this))startService(Intent(this,MorokOverlayService::class.java).putExtra(MorokOverlayService.EXTRA_COMMAND,t))}
+ private fun speak(t:String){tts?.speak(t,android.speech.tts.TextToSpeech.QUEUE_FLUSH,null,"morok-response")}
  private fun broadcast(t:String){sendBroadcast(Intent(ACTION_RESULT).putExtra(EXTRA_TEXT,t).setPackage(packageName))}
  private fun execute(a:CommandAction){
   try{
