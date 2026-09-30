@@ -75,7 +75,11 @@ class UpdateManager(private val activity: Activity) {
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
-    fun install(path: String) {\n        install(File(path))\n    }\n\n    private fun install(file: File) {
+    fun install(path: String) {
+        install(File(path))
+    }
+
+    private fun install(file: File) {
         if (Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) {
             activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.packageName)))
             return
