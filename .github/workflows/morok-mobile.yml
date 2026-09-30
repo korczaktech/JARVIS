@@ -50,10 +50,21 @@ jobs:
           while IFS= read -r apk; do
             test -s "$apk"
           done < <(find app/build/outputs/apk -type f -name "*.apk")
+      - name: Prepare debug updater artifact
+        run: |
+          cp app/build/outputs/apk/debug/*.apk app/build/outputs/apk/debug/morok-mobile-debug.apk
+          echo "${{ github.sha }}" > app/build/outputs/apk/debug/morok-commit.txt
+          echo "${{ github.run_id }}" > app/build/outputs/apk/debug/morok-run.txt
+          echo "${{ github.event.head_commit.id || github.sha }}" > app/build/outputs/apk/debug/morok-source.txt
+          grep "^versionName" app/build/intermediates/packaged_manifests/debug/processDebugManifest/AndroidManifest.xml >/dev/null || true
       - uses: actions/upload-artifact@v4
         with:
           name: morok-mobile-debug
-          path: MOROK/Mobile/app/build/outputs/apk/debug/*.apk
+          path: |
+            MOROK/Mobile/app/build/outputs/apk/debug/morok-mobile-debug.apk
+            MOROK/Mobile/app/build/outputs/apk/debug/morok-commit.txt
+            MOROK/Mobile/app/build/outputs/apk/debug/morok-run.txt
+            MOROK/Mobile/app/build/outputs/apk/debug/morok-source.txt
       - uses: actions/upload-artifact@v4
         with:
           name: morok-mobile-release
