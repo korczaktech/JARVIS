@@ -91,7 +91,7 @@ jobs:
           MOROK_KEY_ALIAS: ${{ secrets.MOROK_RELEASE_KEY_ALIAS }}
           MOROK_KEY_PASSWORD: ${{ secrets.MOROK_RELEASE_KEY_PASSWORD }}
         run: |
-          ./gradlew --no-daemon assembleRelease -PMOROK_VERSION_NAME="${{ steps.version.outputs.version }}" -PMOROK_VERSION_CODE="${{ steps.version.outputs.code }}"
+          gradle --no-daemon assembleRelease -PMOROK_VERSION_NAME="${{ steps.version.outputs.version }}" -PMOROK_VERSION_CODE="${{ steps.version.outputs.code }}"
 
       - name: Prepare release assets
         working-directory: MOROK/Mobile
