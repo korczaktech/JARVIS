@@ -18,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.korczak.morok.core.*
 import com.korczak.morok.service.MorokForegroundService
+import com.korczak.morok.service.MorokAccessibilityService
 import com.korczak.morok.service.MorokOverlayService
 import com.korczak.morok.update.UpdateManager
 import org.json.JSONObject
