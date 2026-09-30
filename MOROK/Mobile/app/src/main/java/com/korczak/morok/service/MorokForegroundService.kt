@@ -36,6 +36,7 @@ class MorokForegroundService:Service(){
   listening=true
   consecutiveErrors=0
   recreateRecognizer()
+  listenNow()
  }
  private fun recreateRecognizer(){
   generation++
