@@ -44,7 +44,7 @@ class MainActivity:ComponentActivity(){
  }
  private fun requestBasePermissions(){val p=buildList{add(Manifest.permission.RECORD_AUDIO);if(Build.VERSION.SDK_INT>=33)add(Manifest.permission.POST_NOTIFICATIONS)};permissionLauncher.launch(p.toTypedArray())}
  private fun startAssistantService(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){return};ContextCompat.startForegroundService(this,Intent(this,MorokForegroundService::class.java))
-  checkForUpdates()}
+  if(getSharedPreferences("morok",MODE_PRIVATE).getBoolean("auto_updates",true))checkForUpdates()}
  private fun requestOverlayPermission(){if(Build.VERSION.SDK_INT>=23&&!Settings.canDrawOverlays(this))startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,android.net.Uri.parse("package:$packageName")))}
  private fun requestAssistantRole(){if(Build.VERSION.SDK_INT>=29){val rm=getSystemService(RoleManager::class.java);if(rm.isRoleAvailable(RoleManager.ROLE_ASSISTANT)&&!rm.isRoleHeld(RoleManager.ROLE_ASSISTANT))runCatching{startActivityForResult(rm.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT),401)}}}
  private fun checkForUpdates(){updateManager.check{r->when{r.startsWith("READY:")->{val p=r.split(":",limit=3);AlertDialog.Builder(this).setTitle("Atualização disponível").setMessage("Morok ${p[1]} está pronta. Atualizar agora?").setPositiveButton("ATUALIZAR"){_,_->updateManager.install(p[2])}.setNegativeButton("AGORA NÃO",null).show()};r.startsWith("ERRO:")->{} }}}
@@ -93,6 +93,8 @@ class MainActivity:ComponentActivity(){
    return JSONObject().apply{put("battery",bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY));put("sdk",Build.VERSION.SDK_INT);put("model",Build.MODEL);put("appVersion",BuildConfig.VERSION_NAME);put("versionCode",BuildConfig.VERSION_CODE);put("packageName",packageName);put("storageTotal",total);put("storageFree",free);put("storageUsed",used);put("storagePercent",if(total>0)used*100.0/total else 0.0);put("ramTotal",mi.totalMem);put("ramAvailable",mi.availMem);put("ramPercent",if(mi.totalMem>0)(mi.totalMem-mi.availMem)*100.0/mi.totalMem else 0.0)}.toString()}
   @JavascriptInterface fun command(text:String):String{val r=router.route(text,CommandSource.VOICE);when(r){is CommandResult.Success->runOnUiThread{execute(r.action)};is CommandResult.RequiresConfirmation->runOnUiThread{AlertDialog.Builder(this@MainActivity).setTitle("Confirmação necessária").setMessage(r.message).setPositiveButton("CONFIRMAR"){_,_->execute(r.action)}.setNegativeButton("CANCELAR",null).show()};else->{} };val m=when(r){is CommandResult.Success->r.message;is CommandResult.RequiresConfirmation->"Confirmação necessária: "+r.message;is CommandResult.NeedsPermission->"Permissão necessária: "+r.permission;is CommandResult.Failure->r.message};webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)};return m}
   @JavascriptInterface fun microphoneStatus():String=MicrophoneDiagnostics.probe(this@MainActivity)
+  @JavascriptInterface fun setAutoUpdate(enabled:Boolean){getSharedPreferences("morok",MODE_PRIVATE).edit().putBoolean("auto_updates",enabled).apply()}
+  @JavascriptInterface fun isAccessibilityEnabled():Boolean=MorokAccessibilityService.isEnabled()
   @JavascriptInterface fun startService()=startAssistantService()
   @JavascriptInterface fun stopService()=stopService(Intent(this@MainActivity,MorokForegroundService::class.java))
   @JavascriptInterface fun requestPermissions()=requestBasePermissions()
