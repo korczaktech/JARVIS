@@ -32,7 +32,7 @@ class UpdateManager(private val activity: Activity) {
                     val expected = downloadText(hashUrl).trim().split(Regex("\\s+")).first()
                     require(expected.equals(sha256(file), true)) { "integridade da atualização inválida" }
                 }
-                activity.runOnUiThread { onResult(version); install(file) }
+                activity.runOnUiThread { onResult("READY:" + version + ":" + file.absolutePath) }
             }.onFailure { e ->
                 activity.runOnUiThread { onResult("ERRO:" + (e.message ?: "falha na atualização")) }
             }
@@ -75,7 +75,7 @@ class UpdateManager(private val activity: Activity) {
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private fun install(file: File) {
+    fun install(path: String) {\n        install(File(path))\n    }\n\n    private fun install(file: File) {
         if (Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) {
             activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.packageName)))
             return
