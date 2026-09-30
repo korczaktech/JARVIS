@@ -21,22 +21,34 @@ class UpdateManager(private val activity: Activity) {
     fun check(onResult: (String) -> Unit) {
         executor.execute {
             runCatching {
-                val json = JSONObject(request(manifestUrl))
-                val sha = json.optString("sha").trim()
-                val version = json.optString("version").ifBlank { "nova" }
-                val channel = json.optString("channel").trim().lowercase()
-                val buildSha = json.optString("buildSha").trim()
-                val apkUrl = json.optString("apkUrl").trim()
-                if (channel != "debug" || buildSha.isBlank() || !apkUrl.endsWith("/artifacts/morok-mobile-debug.apk") || sha.isBlank() || apkUrl.isBlank() || buildSha == BuildConfig.MOROK_BUILD_SHA) return@runCatching
-                val apk = downloadApk(apkUrl, sha)
-                verifySha256(apk, sha)
-                activity.runOnUiThread { onResult("READY:$version:${apk.absolutePath}") }
+                val release = JSONObject(request(releaseUrl))
+                if (release.optString("tag_name").trim() != "morok-debug") throw IllegalStateException("Release Debug do Morok não encontrado")
+                val assets = release.optJSONArray("assets") ?: throw IllegalStateException("Release Debug sem assets")
+                var apkUrl = ""
+                var shaUrl = ""
+                var buildShaUrl = ""
+                for (i in 0 until assets.length()) {
+                    val asset = assets.optJSONObject(i) ?: continue
+                    when (asset.optString("name").trim()) {
+                        "morok-debug.apk" -> apkUrl = asset.optString("browser_download_url").trim()
+                        "morok-debug.sha256" -> shaUrl = asset.optString("browser_download_url").trim()
+                        "build-sha.txt" -> buildShaUrl = asset.optString("browser_download_url").trim()
+                    }
+                }
+                if (apkUrl.isBlank() || shaUrl.isBlank()) throw IllegalStateException("Release Debug sem APK ou checksum")
+                val publishedSha = if (buildShaUrl.isNotBlank()) request(buildShaUrl).trim() else release.optString("target_commitish").trim()
+                if (publishedSha.isBlank() || publishedSha == BuildConfig.MOROK_BUILD_SHA) return@runCatching
+                val expectedSha = request(shaUrl).trim().split(Regex("\\s+")).firstOrNull().orEmpty()
+                if (!Regex("^[a-fA-F0-9]{64}$").matches(expectedSha)) throw IllegalStateException("Checksum do APK Debug inválido no Release")
+                val apk = downloadApk(apkUrl, expectedSha)
+                verifySha256(apk, expectedSha)
+                val version = release.optString("name").ifBlank { "Morok Debug" }
+                activity.runOnUiThread { onResult("READY:" + version + ":" + apk.absolutePath) }
             }.onFailure { e ->
                 activity.runOnUiThread { onResult("ERRO:" + (e.message ?: "falha na atualização")) }
             }
         }
     }
-
     private fun request(url: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
         c.requestMethod = "GET"
