@@ -29,11 +29,11 @@ class MorokForegroundService:Service(){
  private var lastDebugBroadcastAt=0L
  private var tts:android.speech.tts.TextToSpeech?=null
  private var pendingAction:CommandAction?=null
- override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")};startListening()}
- override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{if(i?.action==ACTION_LISTEN_ONCE){if(!listening)startListening();listenOnce();return START_STICKY};when(i?.action){ACTION_CONFIRM->{pendingAction?.let{a->pendingAction=null;execute(a);broadcast("Comando confirmado.");speak("Comando confirmado.")}};ACTION_CANCEL->{pendingAction=null;broadcast("Comando cancelado.");speak("Comando cancelado.")}};if(!listening)startListening();return START_STICKY}
+ override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")}}
+ override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{if(i?.action==ACTION_LISTEN_ONCE){if(!listening)startListening();listenOnce();return START_STICKY};when(i?.action){ACTION_CONFIRM->{pendingAction?.let{a->pendingAction=null;execute(a);broadcast("Comando confirmado.");speak("Comando confirmado.")}};ACTION_CANCEL->{pendingAction=null;broadcast("Comando cancelado.");speak("Comando cancelado.")}};return START_NOT_STICKY}
  override fun onDestroy(){listening=false;generation++;Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null);destroyRecognizer();tts?.shutdown();tts=null;super.onDestroy()}
  override fun onBind(i:Intent?):IBinder?=null
- private fun notification():Notification=NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle(getString(R.string.app_name)).setContentText("Morok ouvindo “Morok” em segundo plano.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setOngoing(true).build()
+ private fun notification():Notification=NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle(getString(R.string.app_name)).setContentText("Morok pronto — aguardando ativação.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setOngoing(true).build()
  private fun startListening(){
   if(listening)return
   if(!hasMic()){broadcast("Permissão de microfone necessária.");return}
@@ -86,12 +86,12 @@ class MorokForegroundService:Service(){
    r.setRecognitionListener(object:RecognitionListener{
     override fun onReadyForSpeech(p:Bundle?){broadcast("MIC_OK:Pronto para falar.")}
     override fun onBeginningOfSpeech(){broadcast("MIC_AUDIO:Fala detectada.")}
-    override fun onRmsChanged(v:Float){val now=SystemClock.elapsedRealtime();if(now-lastLevelBroadcastAt>=120){lastLevelBroadcastAt=now;broadcast("MIC_LEVEL:"+((v.coerceIn(-10f,10f)+10f)*5f).toInt())}}
-    override fun onPartialResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank())broadcast("ASR_PARTIAL:$t")}
+    override fun onRmsChanged(v:Float){lastAudioLevel=v}
+    override fun onPartialResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank())}
     override fun onEndOfSpeech(){broadcast("MIC_AUDIO:Fim da fala.")}
-    override fun onResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank()){broadcast("ASR_FINAL:$t");handle(t,true)};destroyRecognizer();listening=false;startListening()}
-    override fun onError(e:Int){broadcast("ASR_ERROR:$e:"+errorName(e));destroyRecognizer();listening=false;startListening()}
-    override fun onBufferReceived(b:ByteArray?){if(b != null && b.isNotEmpty())broadcast("MIC_BUFFER:"+b.size)}
+    override fun onResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank()){broadcast("ASR_FINAL:$t");handle(t,true)};destroyRecognizer();listening=false;stopSelf()}
+    override fun onError(e:Int){broadcast("ASR_ERROR:$e:"+errorName(e));destroyRecognizer();listening=false;stopSelf()}
+    override fun onBufferReceived(b:ByteArray?){ }
     override fun onEvent(t:Int,p:Bundle?){}
    })
   }
