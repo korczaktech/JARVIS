@@ -26,6 +26,7 @@ class MorokForegroundService:Service(){
  private var lastLevelBroadcastAt=0L
  private var consecutiveErrors=0
  private var partialCommandHandled=false
+ private var lastDebugBroadcastAt=0L
  private var tts:android.speech.tts.TextToSpeech?=null
  private var pendingAction:CommandAction?=null
  override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")};startListening()}
@@ -86,8 +87,16 @@ class MorokForegroundService:Service(){
   try{recognizer?.startListening(i)}catch(e:Throwable){broadcast("ASR_START_ERROR:"+e.javaClass.simpleName);scheduleRestart(1200)}
  }
  private fun errorName(e:Int)=when(e){SpeechRecognizer.ERROR_AUDIO->"AUDIO";SpeechRecognizer.ERROR_CLIENT->"CLIENT";SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS->"PERMISSION";SpeechRecognizer.ERROR_NETWORK->"NETWORK";SpeechRecognizer.ERROR_NETWORK_TIMEOUT->"NETWORK_TIMEOUT";SpeechRecognizer.ERROR_NO_MATCH->"NO_MATCH";SpeechRecognizer.ERROR_RECOGNIZER_BUSY->"BUSY";SpeechRecognizer.ERROR_SERVER->"SERVER";SpeechRecognizer.ERROR_SERVER_DISCONNECTED->"SERVER_DISCONNECTED";SpeechRecognizer.ERROR_SPEECH_TIMEOUT->"SPEECH_TIMEOUT";SpeechRecognizer.ERROR_TOO_MANY_REQUESTS->"TOO_MANY_REQUESTS";else->"UNKNOWN"}
- private fun isWake(s:String)=Regex("^\\s*(?:ok\\s+|hey\\s+|hello\\s+)?morok\\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
- private fun wakeCommand(s:String)=s.trim().replaceFirst(Regex("^\\s*(?:ok\\s+|hey\\s+|hello\\s+)?morok\\s*(?:,|:|-)?\\s*",RegexOption.IGNORE_CASE),"").replaceFirst(Regex("^acorde\\s*",RegexOption.IGNORE_CASE),"").trim()
+ private fun isWake(s:String):Boolean{
+  val n=normalizeVoice(s)
+  return n.matches(Regex("^(?:ok |hey |hello |ei |e )?(morok|morock|moroque|moroc|morocque|moroke)(?:\\b|$).*"))
+ }
+ private fun normalizeVoice(s:String)=Normalizer.normalize(s.lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").replace(Regex("[^a-z0-9 ]")," ").replace(Regex("\\s+")," ").trim()
+ private fun wakeCommand(s:String):String{
+  var n=normalizeVoice(s)
+  n=n.replaceFirst(Regex("^(?:ok |hey |hello |ei |e )?(morok|morock|moroque|moroc|morocque|moroke)\\s*"),"").trim()
+  return n.replaceFirst(Regex("^acorde\\s*"),"").trim()
+ }
  private fun handle(s:String?){
   if(s.isNullOrBlank())return
   val activeWake=isWake(s)
