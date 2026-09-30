@@ -7,6 +7,8 @@ sealed interface CommandAction {
  data object AccessibilityBack:CommandAction
  data object AccessibilityHome:CommandAction
  data object AccessibilityRecents:CommandAction
+ data class AccessibilityClick(val text:String):CommandAction
+ data class AccessibilityType(val text:String):CommandAction
  data object OpenWifiSettings:CommandAction
  data object OpenBluetoothSettings:CommandAction
  data object OpenLocationSettings:CommandAction
