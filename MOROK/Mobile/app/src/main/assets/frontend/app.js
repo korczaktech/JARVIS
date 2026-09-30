@@ -9,7 +9,21 @@ function clock(){const n=new Date();const f=new Intl.DateTimeFormat("pt-BR",{hou
 function startVoice(){if(bridge?.startVoice){bridge.startVoice();toast("Microfone ativado.");}else toast("Serviço de voz indisponível.")}
 function executeCommand(c){const x=c.toLowerCase().trim();if(x.includes("aplicativo")||x.includes("apps"))return go("apps");if(x.includes("config"))return go("settings");if(x.includes("document"))return go("documents");if(x.includes("process"))return go("processes");if(x.includes("relat"))return go("reports");if(x.includes("sistema"))return go("systems");if(x.includes("equipe"))return go("teams");if(x.includes("notifica"))return go("notifications");if(x.includes("início")||x.includes("inicio"))return go("home");if(bridge?.command){const result=bridge.command(c);if(result)toast(result)}}
 function bindActions(){$$(".list-row,[data-action]").forEach(b=>{if(b.dataset.bound==="1")return;b.dataset.bound="1";b.addEventListener("click",()=>{const a=b.dataset.action;switch(a){case"permissions":bridge?.requestPermissions?.();break;case"accessibility":bridge?.openAccessibilitySettings?.();break;case"micdiag":toast("Microfone: "+(bridge?.microphoneStatus?.()||"indisponível"));break;case"world":toast("Horários mundiais atualizados.");break;case"notification":go("notifications");break;case"activity":go("reports");break;case"files":bridge?.openFiles?.()||toast("Abrindo arquivos.");break;case"device":renderAbout();go("about");break;case"apps":go("apps");break;case"process":toast("Processo monitorado pelo serviço Morok.");break;}})})}
-$$(".nav-item,[data-page]").forEach(b=>b.onclick=()=>go(b.dataset.page));$("#micBtn").onclick=startVoice;$("#commandBtn").onclick=()=>{const c=prompt("Digite um comando para o Morok:");if(c)executeCommand(c)};$("#serviceToggle")?.addEventListener("change",e=>{if(e.target.checked){bridge?.startService?.();toast("Serviço Morok iniciado.")}else{bridge?.stopService?.();toast("Serviço Morok parado.")}});window.MorokNative=bridge||window.MorokNative||{};window.MorokNative.commandResult=m=>toast(m);function debugEvent(message){
+function loadUiSettings(){
+ $(".settings-list input[type=checkbox]").forEach((el,i)=>{
+  const key=el.id||["holographic","autoUpdates","uiSound"][i]||("setting"+i);
+  const saved=localStorage.getItem("morok."+key);
+  if(saved!==null)el.checked=saved==="1";
+  el.addEventListener("change",()=>{
+   localStorage.setItem("morok."+key,el.checked?"1":"0");
+   if(key==="autoUpdates")bridge?.setAutoUpdate?.(el.checked);
+   if(key==="holographic")document.body.classList.toggle("no-hologram",!el.checked);
+   toast(el.checked?"Configuração ativada.":"Configuração desativada.");
+  });
+ });
+ const auto=$(".settings-list input[type=checkbox]")[1];if(auto&&bridge?.setAutoUpdate){bridge.setAutoUpdate(auto.checked)}
+}
+$(".nav-item,[data-page]").forEach(b=>b.onclick=()=>go(b.dataset.page));$("#micBtn").onclick=startVoice;$("#commandBtn").onclick=()=>{const c=prompt("Digite um comando para o Morok:");if(c)executeCommand(c)};$("#serviceToggle")?.addEventListener("change",e=>{if(e.target.checked){bridge?.startService?.();toast("Serviço Morok iniciado.")}else{bridge?.stopService?.();toast("Serviço Morok parado.")}});window.MorokNative=bridge||window.MorokNative||{};window.MorokNative.commandResult=m=>toast(m);function debugEvent(message){
  const s=String(message||"");const log=$("#debugLog"),status=$("#debugStatus"),last=$("#debugLastEvent");
  if(!s)return;
  if(log&&!s.startsWith("MIC_LEVEL:")){if(log.querySelector(".debug-empty"))log.innerHTML="";const row=document.createElement("div");row.className="debug-line";row.textContent=new Date().toLocaleTimeString("pt-BR")+"  "+s;log.appendChild(row);while(log.children.length>120)log.removeChild(log.firstChild);log.scrollTop=log.scrollHeight}
@@ -23,4 +37,4 @@ window.MorokNative.voiceResult=t=>executeCommand(t);
 $("#debugListen")?.addEventListener("click",()=>{startVoice();go("debug");});
 $("#debugClear")?.addEventListener("click",()=>{if($("#debugLog"))$("#debugLog").innerHTML='<div class="debug-empty">Log limpo.</div>';if($("#debugTranscript"))$("#debugTranscript").innerHTML='<div class="debug-empty">Nenhuma fala reconhecida ainda.</div>';});
 window.MorokNative.storageInfo=i=>updateMetrics();
-bindActions();clock();updateMetrics();setInterval(clock,1000);setInterval(updateMetrics,3000)})();
+bindActions();loadUiSettings();clock();updateMetrics();setInterval(clock,1000);setInterval(updateMetrics,3000)})();
