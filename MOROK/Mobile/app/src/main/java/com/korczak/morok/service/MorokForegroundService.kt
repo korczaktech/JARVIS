@@ -122,8 +122,8 @@ class MorokForegroundService:Service(){
  private fun handle(s:String?,direct:Boolean=false){
   if(s.isNullOrBlank())return
   val activeWake=isWake(s)
-  if(!activeWake&&!awaitingCommand)return
-  val command=if(activeWake) wakeCommand(s) else s.trim()
+  if(!direct&&!activeWake&&!awaitingCommand)return
+  val command=if(direct) s.trim() else if(activeWake) wakeCommand(s) else s.trim()
   if(activeWake&&command.isBlank()){awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");return}
   awaitingCommand=false
   showOverlay("MOROK\n"+command)
@@ -208,7 +208,16 @@ class MorokForegroundService:Service(){
      else open(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,android.net.Uri.parse("package:$packageName")))
     }
     CommandAction.BatteryStatus->broadcast("Bateria: "+(getSystemService(BATTERY_SERVICE) as android.os.BatteryManager).getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)+"%.")
-    is CommandAction.Dial, is CommandAction.SendSms, CommandAction.None->{}
+    is CommandAction.Dial->{
+     val number=a.number.trim()
+     if(number.isBlank()){broadcast("Número inválido.");return}
+     open(Intent(Intent.ACTION_DIAL,android.net.Uri.parse("tel:"+android.net.Uri.encode(number))))
+    }
+    is CommandAction.SendSms->{
+     val uri=android.net.Uri.parse("smsto:"+android.net.Uri.encode(a.number ?: ""))
+     open(Intent(Intent.ACTION_SENDTO,uri).apply{putExtra("sms_body",a.body)})
+    }
+    CommandAction.None->{}
    }
   }catch(e:Exception){broadcast("Não foi possível executar o comando: "+(e.message?:"erro desconhecido"))}
  }
