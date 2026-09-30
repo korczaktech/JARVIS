@@ -19,17 +19,29 @@ class MorokForegroundService:Service(){
  private var recognizer:SpeechRecognizer?=null
  private var listening=false
  private var awaitingCommand=false
+ private var restarting=false
+ private var generation=0
+ private var lastAudioLevel=0f
+ private var consecutiveErrors=0
  private var tts:android.speech.tts.TextToSpeech?=null
  override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")};startListening()}
  override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{if(!listening)startListening();return START_STICKY}
- override fun onDestroy(){listening=false;recognizer?.destroy();recognizer=null;tts?.shutdown();tts=null;super.onDestroy()}
+ override fun onDestroy(){listening=false;generation++;Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null);destroyRecognizer();tts?.shutdown();tts=null;super.onDestroy()}
  override fun onBind(i:Intent?):IBinder?=null
  private fun notification():Notification=NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle(getString(R.string.app_name)).setContentText("Morok ouvindo “Morok” em segundo plano.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setOngoing(true).build()
  private fun startListening(){
+  if(listening)return
   if(!hasMic()){broadcast("Permissão de microfone necessária.");return}
   if(!isRecognitionReady()){broadcast("Reconhecimento de voz indisponível neste dispositivo.");return}
   listening=true
-  recognizer?.destroy()
+  consecutiveErrors=0
+  recreateRecognizer()
+  listenNow()
+ }
+ private fun recreateRecognizer(){
+  generation++
+  destroyRecognizer()
+  val localGeneration=generation
   recognizer=SpeechRecognizer.createSpeechRecognizer(this).also{r->
    r.setRecognitionListener(object:RecognitionListener{
     override fun onResults(b:Bundle){handle(b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull());restart()}
@@ -45,6 +57,8 @@ class MorokForegroundService:Service(){
   }
   listenNow()
  }
+ private fun scheduleRestart(delay:Long){if(!listening||restarting)return;restarting=true;Handler(Looper.getMainLooper()).postDelayed({restarting=false;if(listening){recreateRecognizer();listenNow()}},delay)}
+ private fun destroyRecognizer(){recognizer?.let{runCatching{it.cancel()};runCatching{it.destroy()}};recognizer=null}
  private fun listenNow(){
   if(!listening)return
   val i=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{
@@ -53,9 +67,9 @@ class MorokForegroundService:Service(){
    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true)
    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3)
   }
-  try{recognizer?.startListening(i)}catch(_:Exception){restart()}
+  try{recognizer?.startListening(i)}catch(e:Throwable){broadcast("ASR_START_ERROR:"+e.javaClass.simpleName);scheduleRestart(1200)}
  }
- private fun restart(){Handler(Looper.getMainLooper()).postDelayed({if(listening)listenNow()},450)}
+ private fun errorName(e:Int)=when(e){SpeechRecognizer.ERROR_AUDIO->"AUDIO";SpeechRecognizer.ERROR_CLIENT->"CLIENT";SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS->"PERMISSION";SpeechRecognizer.ERROR_NETWORK->"NETWORK";SpeechRecognizer.ERROR_NETWORK_TIMEOUT->"NETWORK_TIMEOUT";SpeechRecognizer.ERROR_NO_MATCH->"NO_MATCH";SpeechRecognizer.ERROR_RECOGNIZER_BUSY->"BUSY";SpeechRecognizer.ERROR_SERVER->"SERVER";SpeechRecognizer.ERROR_SERVER_DISCONNECTED->"SERVER_DISCONNECTED";SpeechRecognizer.ERROR_SPEECH_TIMEOUT->"SPEECH_TIMEOUT";SpeechRecognizer.ERROR_TOO_MANY_REQUESTS->"TOO_MANY_REQUESTS";else->"UNKNOWN"}
  private fun isWake(s:String)=Regex("^\\s*(?:ok\\s+|hey\\s+|hello\\s+)?morok\\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
  private fun wakeCommand(s:String)=s.trim().replaceFirst(Regex("^\\s*(?:ok\\s+|hey\\s+|hello\\s+)?morok\\s*(?:,|:|-)?\\s*",RegexOption.IGNORE_CASE),"").replaceFirst(Regex("^acorde\\s*",RegexOption.IGNORE_CASE),"").trim()
  private fun handle(s:String?){
