@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import com.korczak.morok.R
 import com.korczak.morok.core.*
 import java.util.Locale
+import java.text.Normalizer
 
 class MorokForegroundService:Service(){
  companion object{const val CHANNEL_ID="morok_assistant";const val NOTIFICATION_ID=1001;const val ACTION_RESULT="com.korczak.morok.COMMAND_RESULT";const val EXTRA_TEXT="text"}
@@ -22,6 +23,7 @@ class MorokForegroundService:Service(){
  private var restarting=false
  private var generation=0
  private var lastAudioLevel=0f
+ private var lastLevelBroadcastAt=0L
  private var consecutiveErrors=0
  private var partialCommandHandled=false
  private var tts:android.speech.tts.TextToSpeech?=null
@@ -49,7 +51,7 @@ class MorokForegroundService:Service(){
     override fun onError(e:Int){if(localGeneration!=generation||!listening)return;consecutiveErrors++;broadcast("ASR_ERROR:$e:"+errorName(e));scheduleRestart(if(e==SpeechRecognizer.ERROR_RECOGNIZER_BUSY)1000 else 600)}
     override fun onReadyForSpeech(p:Bundle?){if(localGeneration==generation&&listening)broadcast("MIC_OK:Reconhecedor pronto.")}
     override fun onBeginningOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fala detectada.")}
-    override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;broadcast("AUDIO_LEVEL:$v")}}
+    override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;val now=SystemClock.elapsedRealtime();if(now-lastLevelBroadcastAt>=300){lastLevelBroadcastAt=now;broadcast("MIC_LEVEL:"+((v.coerceIn(-10f,10f)+10f)*5f).toInt())}}}
     override fun onBufferReceived(b:ByteArray?){if(localGeneration==generation&&listening&&b!=null&&b.isNotEmpty())broadcast("MIC_BUFFER:"+b.size)}
     override fun onEndOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fim da fala.")}
     override fun onPartialResults(b:Bundle) {
@@ -127,6 +129,14 @@ class MorokForegroundService:Service(){
      am.ringerMode=when(a.mode){CommandAction.RingerMode.NORMAL->AudioManager.RINGER_MODE_NORMAL;CommandAction.RingerMode.VIBRATE->AudioManager.RINGER_MODE_VIBRATE;CommandAction.RingerMode.SILENT->AudioManager.RINGER_MODE_SILENT}
     }
     is CommandAction.OpenUrl->open(Intent(Intent.ACTION_VIEW,android.net.Uri.parse(a.url)))
+    is CommandAction.OpenApp->openApp(a.query)
+    CommandAction.OpenAppList->openAppList()
+    CommandAction.AccessibilityBack->if(!com.korczak.morok.service.MorokAccessibilityService.back())open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    CommandAction.AccessibilityHome->if(!com.korczak.morok.service.MorokAccessibilityService.home())open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    CommandAction.AccessibilityRecents->if(!com.korczak.morok.service.MorokAccessibilityService.recents())open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    is CommandAction.AccessibilityClick->if(!com.korczak.morok.service.MorokAccessibilityService.clickText(a.text))broadcast("Não encontrei esse controle na tela. Ative a Acessibilidade do Morok.")
+    is CommandAction.AccessibilityType->if(!com.korczak.morok.service.MorokAccessibilityService.typeText(a.text))broadcast("Não encontrei um campo de texto focado. Ative a Acessibilidade do Morok.")
+
     CommandAction.OpenSettings->open(Intent(Settings.ACTION_SETTINGS))
     CommandAction.OpenWifiSettings->open(Intent(Settings.ACTION_WIFI_SETTINGS))
     CommandAction.OpenBluetoothSettings->open(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
@@ -154,6 +164,19 @@ class MorokForegroundService:Service(){
     is CommandAction.Dial, is CommandAction.SendSms, CommandAction.None->{}
    }
   }catch(e:Exception){broadcast("Não foi possível executar o comando: "+(e.message?:"erro desconhecido"))}
+ }
+ private fun openApp(query:String){
+  val pm=packageManager
+  val intent=Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+  val apps=pm.queryIntentActivities(intent,0)
+  val q=Normalizer.normalize(query.lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").trim()
+  val match=apps.firstOrNull{Normalizer.normalize(pm.getApplicationLabel(it.activityInfo.applicationInfo).toString().lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").contains(q)}
+  if(match==null){broadcast("Não encontrei o aplicativo: $query");return}
+  open(pm.getLaunchIntentForPackage(match.activityInfo.packageName) ?: return)
+ }
+ private fun openAppList(){
+  val i=Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+  open(i)
  }
  private fun sendMediaKey(k:Int){val am=getSystemService(AUDIO_SERVICE) as AudioManager;am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,k));am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP,k))}
  private fun open(i:Intent){i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);try{startActivity(i)}catch(_:Exception){}}
