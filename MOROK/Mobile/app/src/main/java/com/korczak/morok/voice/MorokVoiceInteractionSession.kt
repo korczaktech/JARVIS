@@ -29,6 +29,6 @@ class MorokVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
     override fun onShow(args: android.os.Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
         text?.text = "MOROK\\nFale seu comando…"
-        context.startService(android.content.Intent(context, com.korczak.morok.service.MorokForegroundService::class.java).setAction(com.korczak.morok.service.MorokForegroundService.ACTION_LISTEN_ONCE))
+        context.startForegroundService(android.content.Intent(context, com.korczak.morok.service.MorokForegroundService::class.java).setAction(com.korczak.morok.service.MorokForegroundService.ACTION_LISTEN_ONCE))
     }
 }
