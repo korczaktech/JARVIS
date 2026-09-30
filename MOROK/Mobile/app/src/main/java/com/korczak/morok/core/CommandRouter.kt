@@ -5,7 +5,7 @@ import java.util.Locale
 import java.util.UUID
 class CommandRouter {
  fun route(text:String,source:CommandSource):CommandResult {
-  var n=normalize(text).replace(Regex("^morok[,:;.!? ]+"),"").trim().replace(Regex("^(por favor,? |pode |poderia |voce pode |você pode |quero que voce |quero que você )"),"").replace(Regex("( por favor| por gentileza)$"),"").trim()
+  var n=normalize(text).replace(Regex("^(?:ok |hey |hello )?morok[,:;.!? ]+"),"").trim().replace(Regex("^(por favor,? |pode |poderia |voce pode |você pode |quero que voce |quero que você )"),"").replace(Regex("( por favor| por gentileza)$"),"").trim()
   if(n.isBlank())return CommandResult.Failure("Diga o comando depois de Morok.")
   fun e(vararg a:String)=a.any{n==normalize(it)}
   return when {
