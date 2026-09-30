@@ -26,8 +26,8 @@ class MorokForegroundService:Service(){
  override fun onBind(i:Intent?):IBinder?=null
  private fun notification():Notification=NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle(getString(R.string.app_name)).setContentText("Morok ouvindo “Morok” em segundo plano.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setOngoing(true).build()
  private fun startListening(){
-  if(Build.VERSION.SDK_INT<31 && !hasMic())return
-  if(!SpeechRecognizer.isRecognitionAvailable(this))return
+  if(!hasMic()){broadcast("Permissão de microfone necessária.");return}
+  if(!isRecognitionReady()){broadcast("Reconhecimento de voz indisponível neste dispositivo.");return}
   listening=true
   recognizer?.destroy()
   recognizer=SpeechRecognizer.createSpeechRecognizer(this).also{r->
@@ -130,4 +130,5 @@ class MorokForegroundService:Service(){
  private fun sendMediaKey(k:Int){val am=getSystemService(AUDIO_SERVICE) as AudioManager;am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN,k));am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP,k))}
  private fun open(i:Intent){i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);try{startActivity(i)}catch(_:Exception){}}
  private fun hasMic()=checkSelfPermission(Manifest.permission.RECORD_AUDIO)==android.content.pm.PackageManager.PERMISSION_GRANTED
+ private fun isRecognitionReady()=SpeechRecognizer.isRecognitionAvailable(this)
 }
