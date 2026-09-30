@@ -3,4 +3,5 @@
     <string name="app_name">Morok</string>
     <string name="service_channel_name">Morok em execução</string>
     <string name="service_channel_description">Serviço local do assistente Morok.</string>
+    <string name="accessibility_service_description">Permite ao Morok navegar entre aplicativos e executar ações globais autorizadas pelo usuário.</string>
 </resources>
