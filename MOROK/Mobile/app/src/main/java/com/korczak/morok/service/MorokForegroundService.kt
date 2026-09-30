@@ -15,7 +15,7 @@ import java.util.Locale
 import java.text.Normalizer
 
 class MorokForegroundService:Service(){
- companion object{const val CHANNEL_ID="morok_assistant";const val NOTIFICATION_ID=1001;const val ACTION_RESULT="com.korczak.morok.COMMAND_RESULT";const val EXTRA_TEXT="text";const val ACTION_CONFIRM="com.korczak.morok.CONFIRM";const val ACTION_CANCEL="com.korczak.morok.CANCEL";fun confirmPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CONFIRM))};fun cancelPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CANCEL))}}
+ companion object{const val CHANNEL_ID="morok_assistant";const val NOTIFICATION_ID=1001;const val ACTION_RESULT="com.korczak.morok.COMMAND_RESULT";const val EXTRA_TEXT="text";const val ACTION_CONFIRM="com.korczak.morok.CONFIRM";const val ACTION_CANCEL="com.korczak.morok.CANCEL";const val ACTION_LISTEN_ONCE="com.korczak.morok.LISTEN_ONCE";fun confirmPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CONFIRM))};fun cancelPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CANCEL))}}
  private val router=CommandRouter()
  private var recognizer:SpeechRecognizer?=null
  private var listening=false
@@ -30,7 +30,7 @@ class MorokForegroundService:Service(){
  private var tts:android.speech.tts.TextToSpeech?=null
  private var pendingAction:CommandAction?=null
  override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")};startListening()}
- override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{when(i?.action){ACTION_CONFIRM->{pendingAction?.let{a->pendingAction=null;execute(a);broadcast("Comando confirmado.");speak("Comando confirmado.")}};ACTION_CANCEL->{pendingAction=null;broadcast("Comando cancelado.");speak("Comando cancelado.")}};if(!listening)startListening();return START_STICKY}
+ override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{if(i?.action==ACTION_LISTEN_ONCE){if(!listening)startListening();listenOnce();return START_STICKY};when(i?.action){ACTION_CONFIRM->{pendingAction?.let{a->pendingAction=null;execute(a);broadcast("Comando confirmado.");speak("Comando confirmado.")}};ACTION_CANCEL->{pendingAction=null;broadcast("Comando cancelado.");speak("Comando cancelado.")}};if(!listening)startListening();return START_STICKY}
  override fun onDestroy(){listening=false;generation++;Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null);destroyRecognizer();tts?.shutdown();tts=null;super.onDestroy()}
  override fun onBind(i:Intent?):IBinder?=null
  private fun notification():Notification=NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle(getString(R.string.app_name)).setContentText("Morok ouvindo “Morok” em segundo plano.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setOngoing(true).build()
@@ -76,6 +76,28 @@ class MorokForegroundService:Service(){
  }
  private fun scheduleRestart(delay:Long){if(!listening||restarting)return;restarting=true;Handler(Looper.getMainLooper()).postDelayed({restarting=false;if(listening){recreateRecognizer();listenNow()}},delay)}
  private fun destroyRecognizer(){recognizer?.let{runCatching{it.cancel()};runCatching{it.destroy()}};recognizer=null}
+ private fun listenOnce(){
+  if(!hasMic()||!isRecognitionReady())return
+  listening=false
+  generation++
+  destroyRecognizer()
+  val localGeneration=generation
+  recognizer=SpeechRecognizer.createSpeechRecognizer(this).also{r->
+   r.setRecognitionListener(object:RecognitionListener{
+    override fun onReadyForSpeech(p:Bundle?){broadcast("MIC_OK:Pronto para falar.")}
+    override fun onBeginningOfSpeech(){broadcast("MIC_AUDIO:Fala detectada.")}
+    override fun onRmsChanged(v:Float){val now=SystemClock.elapsedRealtime();if(now-lastLevelBroadcastAt>=120){lastLevelBroadcastAt=now;broadcast("MIC_LEVEL:"+((v.coerceIn(-10f,10f)+10f)*5f).toInt())}}
+    override fun onPartialResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank())broadcast("ASR_PARTIAL:$t")}
+    override fun onEndOfSpeech(){broadcast("MIC_AUDIO:Fim da fala.")}
+    override fun onResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank()){broadcast("ASR_FINAL:$t");handle(t,true)};destroyRecognizer();listening=false;startListening()}
+    override fun onError(e:Int){broadcast("ASR_ERROR:$e:"+errorName(e));destroyRecognizer();listening=false;startListening()}
+    override fun onBufferReceived(b:ByteArray?){if(!b.isNullOrEmpty())broadcast("MIC_BUFFER:"+b.size)}
+    override fun onEvent(t:Int,p:Bundle?){}
+   })
+  }
+  val intent=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE,"pt-BR");putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3)}
+  runCatching{recognizer?.startListening(intent)}.onFailure{broadcast("ASR_START_ERROR:"+it.javaClass.simpleName);destroyRecognizer();listening=false;startListening()}
+ }
  private fun listenNow(){
   if(!listening)return
   val i=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{
@@ -97,7 +119,7 @@ class MorokForegroundService:Service(){
   n=n.replaceFirst(Regex("^(?:ok |hey |hello |ei |e )?(morok|morock|moroque|moroc|morocque|moroke)\\s*"),"").trim()
   return n.replaceFirst(Regex("^acorde\\s*"),"").trim()
  }
- private fun handle(s:String?){
+ private fun handle(s:String?,direct:Boolean=false){
   if(s.isNullOrBlank())return
   val activeWake=isWake(s)
   if(!activeWake&&!awaitingCommand)return
