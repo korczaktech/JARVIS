@@ -96,6 +96,8 @@ class MainActivity:ComponentActivity(){
   @JavascriptInterface fun startService()=startAssistantService()
   @JavascriptInterface fun stopService()=stopService(Intent(this@MainActivity,MorokForegroundService::class.java))
   @JavascriptInterface fun requestPermissions()=requestBasePermissions()
+  @JavascriptInterface fun openAccessibilitySettings(){startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))}
+  @JavascriptInterface fun openFiles(){startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE))}
   @JavascriptInterface fun requestOverlay(){requestOverlayPermission()}
   @JavascriptInterface fun requestAssistant(){requestAssistantRole()}
   @JavascriptInterface fun startVoice(){startAssistantService();webView.post{webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('morok-voice-start'));",null)}}
