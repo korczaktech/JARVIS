@@ -6,6 +6,7 @@ on:
     paths:
       - "MOROK/Mobile/**"
       - ".github/workflows/morok-mobile-release.yml"
+      - ".github/workflows/morok-mobile.yml"
   workflow_dispatch:
 
 permissions:
