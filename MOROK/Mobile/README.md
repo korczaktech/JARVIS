@@ -1084,3 +1084,8 @@ O objetivo é construir o **Morok funcionando de verdade no Android**.
 ## Release trigger
 
 This marker documents the first production-release pipeline trigger for Morok Mobile. It does not change runtime behavior; the release workflow uses changes under MOROK/Mobile/** to build and publish the signed APK.
+
+
+### Release pipeline validation
+
+The signed Android release pipeline runs Gradle from `MOROK/Mobile` and validates the persistent release keystore before publishing.
