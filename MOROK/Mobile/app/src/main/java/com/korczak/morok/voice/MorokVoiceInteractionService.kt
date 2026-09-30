@@ -7,7 +7,6 @@ import com.korczak.morok.service.MorokForegroundService
 class MorokVoiceInteractionService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
-        setInvocationEffectEnabled(true)
         runCatching { startForegroundService(Intent(this, MorokForegroundService::class.java)) }
     }
 }
