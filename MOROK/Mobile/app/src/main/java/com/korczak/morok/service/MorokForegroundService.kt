@@ -57,7 +57,9 @@ class MorokForegroundService:Service(){
  private fun isWake(s:String)=Regex("^\\s*morok\\b",RegexOption.IGNORE_CASE).containsMatchIn(s.trim())
  private fun handle(s:String?){
   if(s.isNullOrBlank()||!isWake(s))return
-  val result=router.route(s,CommandSource.VOICE)
+  val command=wakeCommand(s)
+  if(android.os.Build.VERSION.SDK_INT>=23 && android.provider.Settings.canDrawOverlays(this)) startService(Intent(this,MorokOverlayService::class.java).putExtra(MorokOverlayService.EXTRA_COMMAND, if(command.isBlank()) "MOROK\nEstou ouvindo…" else "MOROK\n"+command))
+  val result=router.route(command,CommandSource.VOICE)
   when(result){
    is CommandResult.Success->{execute(result.action);broadcast(result.message)}
    is CommandResult.RequiresConfirmation->broadcast("Confirmação necessária: "+result.message)
