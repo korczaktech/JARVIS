@@ -16,6 +16,7 @@ import java.util.concurrent.Executors
 
 class UpdateManager(private val activity: Activity) {
     private val executor = Executors.newSingleThreadExecutor()
+    private val releaseUrl = "https://api.github.com/repos/korczaktechnology-tech/JARVIS/releases/tags/morok-debug"
     private val manifestUrl = "https://raw.githubusercontent.com/korczaktechnology-tech/JARVIS/main/artifacts/morok-update.json"
 
     fun check(onResult: (String) -> Unit) {
