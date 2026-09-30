@@ -105,6 +105,7 @@ class MorokForegroundService:Service(){
   if(activeWake&&command.isBlank()){awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");return}
   awaitingCommand=false
   showOverlay("MOROK\n"+command)
+  if(openInstalledApp(command))return
   val result=router.route(command,CommandSource.VOICE)
   when(result){
    is CommandResult.Success->{execute(result.action);broadcast(result.message);speak(result.message)}
@@ -112,6 +113,21 @@ class MorokForegroundService:Service(){
    is CommandResult.Failure->{broadcast(result.message);speak(result.message)}
    is CommandResult.NeedsPermission->broadcast("Permissão necessária: "+result.permission)
   }
+ }
+ private fun openInstalledApp(command:String):Boolean{
+  val n=normalizeVoice(command)
+  if(!n.startsWith("abrir "))return false
+  val requested=n.removePrefix("abrir ").trim()
+  if(requested.isBlank())return false
+  val pm=packageManager
+  val apps=pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+  val hit=apps.firstOrNull{app->
+   val label=normalizeVoice(pm.getApplicationLabel(app).toString())
+   label==requested || label.contains(requested) || requested.contains(label)
+  } ?: return false
+  val intent=pm.getLaunchIntentForPackage(hit.packageName) ?: return false
+  intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+  return try{startActivity(intent);broadcast("Abrindo "+pm.getApplicationLabel(hit).toString()+".");speak("Abrindo "+pm.getApplicationLabel(hit).toString()+".");true}catch(_:Exception){false}
  }
  private fun showOverlay(t:String){if(android.os.Build.VERSION.SDK_INT<23||android.provider.Settings.canDrawOverlays(this))startService(Intent(this,MorokOverlayService::class.java).putExtra(MorokOverlayService.EXTRA_COMMAND,t))}
  private fun speak(t:String){tts?.speak(t,android.speech.tts.TextToSpeech.QUEUE_FLUSH,null,"morok-response")}
