@@ -24,8 +24,9 @@ class UpdateManager(private val activity: Activity) {
                 val json = JSONObject(request(manifestUrl))
                 val sha = json.optString("sha").trim()
                 val version = json.optString("version").ifBlank { "nova" }
+                val channel = json.optString("channel").trim().lowercase()
                 val apkUrl = json.optString("apkUrl").trim()
-                if (sha.isBlank() || apkUrl.isBlank() || sha == BuildConfig.MOROK_BUILD_SHA) return@runCatching
+                if (channel != "debug" || !apkUrl.endsWith("/morok-mobile-debug.apk") || sha.isBlank() || apkUrl.isBlank() || sha == BuildConfig.MOROK_BUILD_SHA) return@runCatching
                 val apk = downloadApk(apkUrl, sha)
                 verifySha256(apk, sha)
                 activity.runOnUiThread { onResult("READY:$version:${apk.absolutePath}") }
