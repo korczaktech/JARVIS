@@ -1,0 +1,20 @@
+name: Morok Actions Smoke
+
+on:
+  push:
+    paths:
+      - ".github/workflows/morok-actions-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Runner smoke test
+        run: |
+          echo "GitHub Actions runner OK"
+          test -f MOROK/Mobile/app/build.gradle.kts
