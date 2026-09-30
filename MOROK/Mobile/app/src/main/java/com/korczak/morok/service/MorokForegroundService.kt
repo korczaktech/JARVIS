@@ -96,7 +96,7 @@ class MorokForegroundService:Service(){
    })
   }
   val intent=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE,"pt-BR");putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,3)}
-  runCatching{recognizer?.startListening(intent)}.onFailure{broadcast("ASR_START_ERROR:"+it.javaClass.simpleName);destroyRecognizer();listening=false;startListening()}
+  runCatching{recognizer?.startListening(intent)}.onFailure{broadcast("ASR_START_ERROR:"+it.javaClass.simpleName);destroyRecognizer();listening=false;stopSelf()}
  }
  private fun listenNow(){
   if(!listening)return
