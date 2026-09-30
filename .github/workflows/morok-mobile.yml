@@ -1,74 +1,56 @@
-name: Morok Mobile Android Debug
+name: Morok Mobile Debug Release
 
 on:
   push:
+    branches: [main]
     paths:
       - "MOROK/Mobile/**"
-      - ".github/workflows/morok-mobile.yml"
-  pull_request:
-    paths:
-      - "MOROK/Mobile/**"
-      - ".github/workflows/morok-mobile.yml"
+      - ".github/workflows/morok-mobile-release.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  verify:
+  release-debug:
     runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: MOROK/Mobile
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
           cache: gradle
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Compile debug
+
+      - name: Build debug APK
         run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" assembleDebug
-      - name: Unit tests
-        run: gradle --no-daemon test
-      - name: Lint release
-        run: gradle --no-daemon lintRelease
-      - name: Create ephemeral CI signing key
+
+      - name: Prepare debug assets
         run: |
-          keytool -genkeypair -v -keystore "$RUNNER_TEMP/morok-ci.jks" -storepass "morok-ci-password" -keypass "morok-ci-password" -alias "morok-ci" -keyalg RSA -keysize 2048 -validity 1 -dname "CN=Morok CI, OU=Build, O=Korczak Technology, L=CI, ST=CI, C=BR"
-      - name: Compile signed release
+          mkdir -p "${{ runner.temp }}/morok-release"
+          cp app/build/outputs/apk/debug/*.apk "${{ runner.temp }}/morok-release/morok-debug.apk"
+          sha256sum "${{ runner.temp }}/morok-release/morok-debug.apk" | awk '{print $1}' > "${{ runner.temp }}/morok-release/morok-debug.sha256"
+          echo "${{ github.sha }}" > "${{ runner.temp }}/morok-release/build-sha.txt"
+
+      - name: Replace debug release
         env:
-          MOROK_KEYSTORE_FILE: ${{ runner.temp }}/morok-ci.jks
-          MOROK_KEYSTORE_PASSWORD: morok-ci-password
-          MOROK_KEY_ALIAS: morok-ci
-          MOROK_KEY_PASSWORD: morok-ci-password
-        run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" assembleRelease
-      - name: Verify APK outputs
+          GH_TOKEN: ${{ github.token }}
         run: |
-          test -s app/build/outputs/apk/debug/*.apk
-          test -s app/build/outputs/apk/release/*.apk
-      - name: Prepare debug artifact
-        run: |
-          cp app/build/outputs/apk/debug/*.apk app/build/outputs/apk/debug/morok-mobile-debug.apk
-          sha256sum app/build/outputs/apk/debug/morok-mobile-debug.apk | awk '{print $1}' > app/build/outputs/apk/debug/morok-mobile-debug.sha256
-      - uses: actions/upload-artifact@v4
-        with:
-          name: morok-mobile-debug
-          path: |
-            MOROK/Mobile/app/build/outputs/apk/debug/morok-mobile-debug.apk
-            MOROK/Mobile/app/build/outputs/apk/debug/morok-mobile-debug.sha256
-      - name: Publish debug updater files
-        run: |
-          rm -rf artifacts
-          mkdir -p ../../artifacts
-          cp app/build/outputs/apk/debug/morok-mobile-debug.apk ../../artifacts/morok-mobile-debug.apk
-          SHA=$(cat app/build/outputs/apk/debug/morok-mobile-debug.sha256)
-          printf '{"version":"debug","channel":"debug","buildSha":"%s","sha":"%s","apkUrl":"https://raw.githubusercontent.com/korczaktechnology-tech/JARVIS/main/artifacts/morok-mobile-debug.apk"}\n' "${{ github.sha }}" "$SHA" > ../../artifacts/morok-update.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A ../../artifacts
-          git diff --cached --quiet || git commit -m "build(morok-mobile): publish debug updater"
-          git push
+          gh release delete morok-debug --cleanup-tag --yes 2>/dev/null || true
+          gh release delete v0.0.3 --cleanup-tag --yes 2>/dev/null || true
+          gh release create morok-debug \
+            --target "${{ github.sha }}" \
+            --title "Morok Debug" \
+            --prerelease \
+            --notes "Morok Mobile debug build. Commit: ${{ github.sha }}" \
+            "${{ runner.temp }}/morok-release/morok-debug.apk#morok-debug.apk" \
+            "${{ runner.temp }}/morok-release/morok-debug.sha256#morok-debug.sha256" \
+            "${{ runner.temp }}/morok-release/build-sha.txt#build-sha.txt"
