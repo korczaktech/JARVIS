@@ -5,7 +5,7 @@ import java.util.Locale
 import java.util.UUID
 class CommandRouter {
  fun route(text:String,source:CommandSource):CommandResult {
-  var n=normalize(text).replace(Regex("^morok[,:;.!? ]+"),"").trim()
+  var n=normalize(text).replace(Regex("^morok[,:;.!? ]+"),"").trim().replace(Regex("^(por favor,? |pode |poderia |voce pode |você pode |quero que voce |quero que você )"),"").replace(Regex("( por favor| por gentileza)$"),"").trim()
   if(n.isBlank())return CommandResult.Failure("Diga o comando depois de Morok.")
   fun e(vararg a:String)=a.any{n==normalize(it)}
   return when {
@@ -13,8 +13,8 @@ class CommandRouter {
    e("status","status do sistema","como você está","como voce esta")->CommandResult.Success("Morok está ativo.")
    e("ajuda","comandos","quais comandos","o que você pode fazer","o que voce pode fazer")->CommandResult.Success("Posso controlar brilho, volume, lanterna, conexões, mídia, configurações, câmera, calendário, contatos, arquivos, navegador, pesquisas, chamadas e mensagens.")
    e("cancelar","cancele","pare","parar","pare tudo","stop","cancelar comando")->CommandResult.Success("Execução cancelada.")
-   e("ligar lanterna","ligar a lanterna","acender lanterna","acender a lanterna","ativar lanterna","ativar a lanterna")->CommandResult.Success("Lanterna ligada.",CommandAction.FlashlightOn)
-   e("desligar lanterna","desligar a lanterna","apagar lanterna","apagar a lanterna","desativar lanterna","desativar a lanterna")->CommandResult.Success("Lanterna desligada.",CommandAction.FlashlightOff)
+   Regex("^(ligar|liga|ligue|acender|acenda|ativar|ative) (a )?lanterna$").matches(n)->CommandResult.Success("Lanterna ligada.",CommandAction.FlashlightOn)
+   Regex("^(desligar|desliga|desligue|apagar|apague|desativar|desative) (a )?lanterna$").matches(n)->CommandResult.Success("Lanterna desligada.",CommandAction.FlashlightOff)
    e("abrir configurações","abrir as configurações","abrir configuracoes","configurações","configuracoes","ir para configurações")->CommandResult.Success("Abrindo configurações.",CommandAction.OpenSettings)
    e("wifi","wi-fi","abrir wifi","abrir wi-fi","abrir o wifi","abrir o wi-fi","configurar wifi")->CommandResult.Success("Abrindo configurações de Wi-Fi.",CommandAction.OpenWifiSettings)
    e("bluetooth","abrir bluetooth","abrir o bluetooth","configurar bluetooth")->CommandResult.Success("Abrindo configurações de Bluetooth.",CommandAction.OpenBluetoothSettings)
@@ -30,7 +30,7 @@ class CommandRouter {
    e("configurações do aplicativo","configuracoes do aplicativo","configurações do morok","configuracoes do morok")->CommandResult.Success("Abrindo configurações do Morok.",CommandAction.OpenAppSettings)
    e("volume máximo","volume maximo","aumentar volume ao máximo","aumentar o volume ao máximo")->CommandResult.Success("Volume no máximo.",CommandAction.SetVolume(100))
    e("volume mínimo","volume minimo","diminuir volume ao mínimo","diminuir o volume ao mínimo")->CommandResult.Success("Volume no mínimo.",CommandAction.SetVolume(0))
-   Regex("^(defina |definir |coloque |colocar |ajuste |ajustar |aumente |aumentar |diminua |diminuir )?(o )?volume( para)? [0-9]{1,3}%?$").matches(n)->parse(n.substringAfter("volume").trim().removePrefix("para").trim(),"volume"){CommandAction.SetVolume(it)}
+   Regex("^(defina |definir |coloque |colocar |ajuste |ajustar |aumente |aumentar |diminua |diminuir )?(o )?volume( para| em)? [0-9]{1,3}%?$").matches(n)->parse(n.substringAfter("volume").trim().removePrefix("para").trim(),"volume"){CommandAction.SetVolume(it)}
    Regex("^(defina |definir |coloque |colocar |ajuste |ajustar )?(o )?brilho( da tela)?( para)? [0-9]{1,3}%?$").matches(n)->parse(n.substringAfter("brilho").trim().removePrefix("da tela").removePrefix("para").trim(),"brilho"){CommandAction.SetBrightness(it)}
    e("aumentar volume","aumente o volume","aumentar o volume","volume mais alto","mais volume")->CommandResult.Success("Aumentando o volume.",CommandAction.VolumeDelta(1))
    e("diminuir volume","diminua o volume","diminuir o volume","volume mais baixo","menos volume")->CommandResult.Success("Diminuindo o volume.",CommandAction.VolumeDelta(-1))
