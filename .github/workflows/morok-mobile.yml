@@ -69,6 +69,6 @@ jobs:
           printf '{"version":"debug","channel":"debug","buildSha":"%s","sha":"%s","apkUrl":"https://raw.githubusercontent.com/korczaktechnology-tech/JARVIS/main/artifacts/morok-mobile-debug.apk"}\n' "${{ github.sha }}" "$SHA" > ../../artifacts/morok-update.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A artifacts ../../artifacts
+          git add -A ../../artifacts
           git diff --cached --quiet || git commit -m "build(morok-mobile): publish debug updater"
           git push
