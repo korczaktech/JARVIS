@@ -43,8 +43,7 @@ class MainActivity:ComponentActivity(){
   requestBasePermissions()
  }
  private fun requestBasePermissions(){val p=buildList{add(Manifest.permission.RECORD_AUDIO);if(Build.VERSION.SDK_INT>=33)add(Manifest.permission.POST_NOTIFICATIONS)};permissionLauncher.launch(p.toTypedArray())}
- private fun startAssistantService(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){return};ContextCompat.startForegroundService(this,Intent(this,MorokForegroundService::class.java))
-  if(getSharedPreferences("morok",MODE_PRIVATE).getBoolean("auto_updates",true))checkForUpdates()}
+ private fun startAssistantService(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){return};if(getSharedPreferences("morok",MODE_PRIVATE).getBoolean("auto_updates",true))checkForUpdates()}
  private fun requestOverlayPermission(){if(Build.VERSION.SDK_INT>=23&&!Settings.canDrawOverlays(this))startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,android.net.Uri.parse("package:$packageName")))}
  private fun requestAssistantRole(){if(Build.VERSION.SDK_INT>=29){val rm=getSystemService(RoleManager::class.java);if(rm.isRoleAvailable(RoleManager.ROLE_ASSISTANT)&&!rm.isRoleHeld(RoleManager.ROLE_ASSISTANT))runCatching{startActivityForResult(rm.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT),401)}}}
  private fun checkForUpdates(){updateManager.check{r->when{r.startsWith("READY:")->{val p=r.split(":",limit=3);AlertDialog.Builder(this).setTitle("Atualização disponível").setMessage("Morok ${p[1]} está pronta. Atualizar agora?").setPositiveButton("ATUALIZAR"){_,_->updateManager.install(p[2])}.setNegativeButton("AGORA NÃO",null).show()};r.startsWith("ERRO:")->{} }}}
