@@ -4,11 +4,9 @@ import android.Manifest
 import android.app.*
 import android.content.*
 import android.media.AudioManager
-import android.media.MediaPlayer
 import android.os.*
 import android.provider.Settings
 import android.speech.*
-import android.telephony.SmsManager
 import androidx.core.app.NotificationCompat
 import com.korczak.morok.R
 import com.korczak.morok.core.*
@@ -113,7 +111,6 @@ class MorokForegroundService:Service(){
      else open(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,android.net.Uri.parse("package:$packageName")))
     }
     CommandAction.BatteryStatus->broadcast("Bateria: "+(getSystemService(BATTERY_SERVICE) as android.os.BatteryManager).getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)+"%.")
-    CommandAction.OpenDateSettings,CommandAction.OpenTimeSettings->open(Intent(Settings.ACTION_DATE_SETTINGS))
     is CommandAction.Dial, is CommandAction.SendSms, CommandAction.None->{}
    }
   }catch(e:Exception){broadcast("Não foi possível executar o comando: "+(e.message?:"erro desconhecido"))}
