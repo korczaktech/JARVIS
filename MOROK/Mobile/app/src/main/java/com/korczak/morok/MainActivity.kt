@@ -31,7 +31,7 @@ class MainActivity:ComponentActivity(){
  private lateinit var webView:WebView
  private lateinit var updateManager:UpdateManager
  private val permissionLauncher=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){startAssistantService()}
- private val receiver=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){val m=i.getStringExtra(MorokForegroundService.EXTRA_TEXT)?:return;if(::webView.isInitialized)webView.post{if(m.startsWith("MIC_")||m.startsWith("ASR_")||m.startsWith("MIC_LEVEL:"))webView.evaluateJavascript("window.MorokNative?.voiceDebug("+JSONObject.quote(m)+");",null)else webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)}}}
+ private val receiver=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){val m=i.getStringExtra(MorokForegroundService.EXTRA_TEXT)?:return;if(::webView.isInitialized)webView.post{if(m.startsWith("MIC_")||m.startsWith("ASR_")||m.startsWith("AUDIO_LEVEL:")){if(!m.startsWith("AUDIO_LEVEL:")||System.currentTimeMillis()%1000<80)webView.evaluateJavascript("window.MorokNative?.voiceDebug("+JSONObject.quote(m)+");",null)}else webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)}}}
  override fun onCreate(savedInstanceState:Bundle?){
   super.onCreate(savedInstanceState)
   webView=WebView(this).apply{settings.javaScriptEnabled=true;settings.domStorageEnabled=true;settings.allowFileAccess=true;settings.allowContentAccess=true;webViewClient=WebViewClient();webChromeClient=WebChromeClient();addJavascriptInterface(NativeBridge(),"MorokNative");setBackgroundColor(android.graphics.Color.BLACK)}
@@ -98,7 +98,9 @@ class MainActivity:ComponentActivity(){
   @JavascriptInterface fun requestPermissions()=requestBasePermissions()
   @JavascriptInterface fun requestOverlay(){requestOverlayPermission()}
   @JavascriptInterface fun requestAssistant(){requestAssistantRole()}
-  @JavascriptInterface fun startVoice(){webView.post{webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('morok-voice-start'));",null)}}
+  @JavascriptInterface fun startVoice(){startAssistantService();webView.post{webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('morok-voice-start'));",null)}}
+  @JavascriptInterface fun installedApps():String{val pm=packageManager;val intent=Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);return org.json.JSONArray(pm.queryIntentActivities(intent,0).map{r->JSONObject().apply{put("packageName",r.activityInfo.packageName);put("name",pm.getApplicationLabel(r.activityInfo.applicationInfo).toString())}}).toString()}
+  @JavascriptInterface fun openApp(query:String):String{val pm=packageManager;val q=Normalizer.normalize(query.lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").trim();val intent=Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);val match=pm.queryIntentActivities(intent,0).firstOrNull{Normalizer.normalize(pm.getApplicationLabel(it.activityInfo.applicationInfo).toString().lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").contains(q)}?:return "Aplicativo não encontrado: $query";val launch=pm.getLaunchIntentForPackage(match.activityInfo.packageName)?:return "Aplicativo sem tela inicial: $query";launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(launch);return "Abrindo "+pm.getApplicationLabel(match.activityInfo.applicationInfo).toString()}
  }
  private fun openApp(query:String){
   val intent=Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
