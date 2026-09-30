@@ -52,7 +52,21 @@ class MorokForegroundService:Service(){
     override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;broadcast("AUDIO_LEVEL:$v")}}
     override fun onBufferReceived(b:ByteArray?){if(localGeneration==generation&&!b.isNullOrEmpty())broadcast("MIC_BUFFER:"+b.size)}
     override fun onEndOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fim da fala.")}
-    override fun onPartialResults(b:Bundle){if(localGeneration!=generation||!listening)return;val s=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(s!=null){broadcast("ASR_PARTIAL:$s");if(isWake(s)){val cmd=wakeCommand(s);if(cmd.isNotBlank()){partialCommandHandled=true;handle(s)}else{awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");speak("Fale seu comando.")}}}}}
+    override fun onPartialResults(b:Bundle) {
+     if (localGeneration != generation || !listening) return
+     val text = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: return
+     broadcast("ASR_PARTIAL:$text")
+     if (!isWake(text)) return
+     val command = wakeCommand(text)
+     if (command.isNotBlank()) {
+      partialCommandHandled = true
+      handle(text)
+     } else {
+      awaitingCommand = true
+      showOverlay("MOROK\\nFale seu comando…")
+      speak("Fale seu comando.")
+     }
+    }
     override fun onEvent(t:Int,p:Bundle?){}
    })  }
   listenNow()
