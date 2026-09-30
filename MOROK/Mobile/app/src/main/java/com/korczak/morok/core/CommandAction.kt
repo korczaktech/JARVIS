@@ -2,6 +2,11 @@ package com.korczak.morok.core
 sealed interface CommandAction {
  data object None:CommandAction
  data object OpenSettings:CommandAction
+ data class OpenApp(val query:String):CommandAction
+ data object OpenAppList:CommandAction
+ data object AccessibilityBack:CommandAction
+ data object AccessibilityHome:CommandAction
+ data object AccessibilityRecents:CommandAction
  data object OpenWifiSettings:CommandAction
  data object OpenBluetoothSettings:CommandAction
  data object OpenLocationSettings:CommandAction
