@@ -6,6 +6,7 @@ import android.media.AudioManager
 import android.os.*
 import android.provider.Settings
 import android.webkit.*
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -47,7 +48,7 @@ class MainActivity:ComponentActivity(){
    CommandAction.OpenFiles->startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE))
    CommandAction.OpenNotifications->startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
    CommandAction.OpenDateSettings->startActivity(Intent(Settings.ACTION_DATE_SETTINGS))
-   CommandAction.OpenTimeSettings->startActivity(Intent(Settings.ACTION_DATE_SETTINGS))
+   CommandAction.OpenTimeSettings->startActivity(Intent(Settings.ACTION_TIME_SETTINGS))
    CommandAction.StorageSettings->startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
    CommandAction.OpenNetworkSettings->startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
    CommandAction.OpenDisplaySettings->startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS))
@@ -56,7 +57,7 @@ class MainActivity:ComponentActivity(){
   }}catch(_:Exception){}
  }
  inner class NativeBridge{
-  @JavascriptInterface fun deviceInfo():String{val bm=getSystemService(BATTERY_SERVICE) as android.os.BatteryManager;return JSONObject().apply{put("battery",bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY));put("sdk",Build.VERSION.SDK_INT);put("model",Build.MODEL))}.toString()}
+  @JavascriptInterface fun deviceInfo():String{val bm=getSystemService(BATTERY_SERVICE) as android.os.BatteryManager;return JSONObject().apply{put("battery",bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY));put("sdk",Build.VERSION.SDK_INT);put("model",Build.MODEL)}.toString()}
   @JavascriptInterface fun command(text:String):String{val r=router.route(text,CommandSource.VOICE);when(r){is CommandResult.Success->execute(r.action);is CommandResult.RequiresConfirmation->{}else->{} };val m=when(r){is CommandResult.Success->r.message;is CommandResult.RequiresConfirmation->"Confirmação necessária: "+r.message;is CommandResult.NeedsPermission->"Permissão necessária: "+r.permission;is CommandResult.Failure->r.message};webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)};return m}
   @JavascriptInterface fun startService()=startAssistantService()
   @JavascriptInterface fun stopService()=stopService(Intent(this@MainActivity,MorokForegroundService::class.java))
