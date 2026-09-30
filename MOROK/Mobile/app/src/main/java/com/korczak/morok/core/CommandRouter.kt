@@ -52,7 +52,7 @@ class CommandRouter {
    else->CommandResult.Failure("Não reconheci esse comando. Diga ajuda para ver os comandos básicos.")
   }
  }
- private fun normalize(v:String)=Normalizer.normalize(v.lowercase(Locale.ROOT),Normalizer.Form.NFD).replace("\p{M}+".toRegex(),"").replace(Regex("[!?;]+")," ").replace(Regex("\s+")," ").trim().removeSuffix(".")
+ private fun normalize(v:String)=Normalizer.normalize(v.lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").replace(Regex("[!?;]+")," ").replace(Regex("\\s+")," ").trim().removeSuffix(".")
  private fun parse(v:String,label:String,action:(Int)->CommandAction):CommandResult{val x=v.replace("%","").trim().toIntOrNull()?:return CommandResult.Failure("Use $label de 0 a 100.");if(x !in 0..100)return CommandResult.Failure("$label deve ficar entre 0 e 100.");return CommandResult.Success("$label ajustado para $x%.",action(x))}
  fun createCommand(text:String,source:CommandSource)=Command(UUID.randomUUID().toString(),text,source,System.currentTimeMillis())
 }
