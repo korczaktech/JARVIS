@@ -27,7 +27,7 @@ jobs:
         with:
           gradle-version: "8.9"
       - name: Compile debug
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" assembleDebug
       - name: Unit tests
         run: gradle --no-daemon test
       - name: Lint release
@@ -42,7 +42,7 @@ jobs:
           MOROK_KEYSTORE_PASSWORD: morok-ci-password
           MOROK_KEY_ALIAS: morok-ci
           MOROK_KEY_PASSWORD: morok-ci-password
-        run: gradle --no-daemon assembleRelease
+        run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" assembleRelease
       - name: Verify APK outputs
         run: |
           find app/build/outputs/apk -type f -name "*.apk" -print
