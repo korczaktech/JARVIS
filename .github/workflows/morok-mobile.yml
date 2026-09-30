@@ -30,7 +30,18 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Prepare persistent signing key
+        env:
+          MOROK_RELEASE_KEYSTORE_BASE64: ${{ secrets.MOROK_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          echo "$MOROK_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/morok-release.keystore"
+
       - name: Build debug APK
+        env:
+          MOROK_KEYSTORE_FILE: ${{ runner.temp }}/morok-release.keystore
+          MOROK_KEYSTORE_PASSWORD: ${{ secrets.MOROK_RELEASE_KEYSTORE_PASSWORD }}
+          MOROK_KEY_ALIAS: ${{ secrets.MOROK_RELEASE_KEY_ALIAS }}
+          MOROK_KEY_PASSWORD: ${{ secrets.MOROK_RELEASE_KEY_PASSWORD }}
         run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" assembleDebug
 
       - name: Prepare debug assets
@@ -45,6 +56,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete morok-debug --cleanup-tag --yes 2>/dev/null || true
+          gh release delete v0.0.1 --cleanup-tag --yes 2>/dev/null || true
+          gh release delete v0.0.2 --cleanup-tag --yes 2>/dev/null || true
           gh release delete v0.0.3 --cleanup-tag --yes 2>/dev/null || true
           gh release create morok-debug \
             --target "${{ github.sha }}" \
