@@ -1077,3 +1077,10 @@ O núcleo não deverá depender dela.
 O objetivo não é construir uma demonstração de um Jarvis.
 
 O objetivo é construir o **Morok funcionando de verdade no Android**.
+
+
+---
+
+## Release trigger
+
+This marker documents the first production-release pipeline trigger for Morok Mobile. It does not change runtime behavior; the release workflow uses changes under MOROK/Mobile/** to build and publish the signed APK.
