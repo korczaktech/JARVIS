@@ -91,7 +91,7 @@ class MorokForegroundService:Service(){
     override fun onEndOfSpeech(){broadcast("MIC_AUDIO:Fim da fala.")}
     override fun onResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank()){broadcast("ASR_FINAL:$t");handle(t,true)};destroyRecognizer();listening=false;startListening()}
     override fun onError(e:Int){broadcast("ASR_ERROR:$e:"+errorName(e));destroyRecognizer();listening=false;startListening()}
-    override fun onBufferReceived(b:ByteArray?){if(!b.isNullOrEmpty())broadcast("MIC_BUFFER:"+b.size)}
+    override fun onBufferReceived(b:ByteArray?){if(b != null && b.isNotEmpty())broadcast("MIC_BUFFER:"+b.size)}
     override fun onEvent(t:Int,p:Bundle?){}
    })
   }
