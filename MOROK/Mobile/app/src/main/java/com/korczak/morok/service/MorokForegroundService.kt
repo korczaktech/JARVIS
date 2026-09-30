@@ -60,7 +60,7 @@ class MorokForegroundService:Service(){
      broadcast("ASR_PARTIAL:$text")
      if (!isWake(text)) return
      val command = wakeCommand(text)
-     if (command.isNotBlank()) {
+     if (command.isNotBlank() && !partialCommandHandled) {
       partialCommandHandled = true
       handle(text)
      } else {
@@ -71,7 +71,6 @@ class MorokForegroundService:Service(){
     }
     override fun onEvent(t:Int,p:Bundle?){}
    })  }
-  listenNow()
  }
  private fun scheduleRestart(delay:Long){if(!listening||restarting)return;restarting=true;Handler(Looper.getMainLooper()).postDelayed({restarting=false;if(listening){recreateRecognizer();listenNow()}},delay)}
  private fun destroyRecognizer(){recognizer?.let{runCatching{it.cancel()};runCatching{it.destroy()}};recognizer=null}
