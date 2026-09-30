@@ -87,7 +87,7 @@ class MorokForegroundService:Service(){
     override fun onReadyForSpeech(p:Bundle?){broadcast("MIC_OK:Pronto para falar.")}
     override fun onBeginningOfSpeech(){broadcast("MIC_AUDIO:Fala detectada.")}
     override fun onRmsChanged(v:Float){lastAudioLevel=v}
-    override fun onPartialResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank())}
+    override fun onPartialResults(b:Bundle){}
     override fun onEndOfSpeech(){broadcast("MIC_AUDIO:Fim da fala.")}
     override fun onResults(b:Bundle){val t=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!t.isNullOrBlank()){broadcast("ASR_FINAL:$t");handle(t,true)};destroyRecognizer();listening=false;stopSelf()}
     override fun onError(e:Int){broadcast("ASR_ERROR:$e:"+errorName(e));destroyRecognizer();listening=false;stopSelf()}
