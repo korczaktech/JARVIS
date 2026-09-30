@@ -13,6 +13,7 @@ android {
         targetSdk = 35
         versionCode = (providers.gradleProperty("MOROK_VERSION_CODE").orNull ?: "1").toInt()
         versionName = providers.gradleProperty("MOROK_VERSION_NAME").orNull ?: "0.0.1"
+        buildConfigField("String", "MOROK_BUILD_SHA", "\"${providers.gradleProperty("MOROK_BUILD_SHA").orNull ?: "local"}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
