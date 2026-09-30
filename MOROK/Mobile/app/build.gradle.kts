@@ -29,7 +29,10 @@ android {
         }
     }
     buildTypes {
-        debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
+        debug {
+            versionNameSuffix = "-debug"
+            if (!System.getenv("MOROK_KEYSTORE_FILE").isNullOrBlank()) signingConfig = signingConfigs.getByName("ciRelease")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
