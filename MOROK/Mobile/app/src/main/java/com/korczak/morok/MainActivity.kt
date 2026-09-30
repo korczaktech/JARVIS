@@ -22,6 +22,7 @@ import com.korczak.morok.service.MorokAccessibilityService
 import com.korczak.morok.service.MorokOverlayService
 import com.korczak.morok.update.UpdateManager
 import org.json.JSONObject
+import android.content.pm.ApplicationInfo
 import java.text.Normalizer
 import java.util.Locale
 
