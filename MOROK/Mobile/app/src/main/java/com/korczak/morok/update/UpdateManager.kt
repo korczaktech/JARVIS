@@ -16,7 +16,7 @@ import java.util.concurrent.Executors
 
 class UpdateManager(private val activity: Activity) {
     private val executor = Executors.newSingleThreadExecutor()
-    private val manifestUrl = "https://korczaktechnology-tech.github.io/JARVIS/morok-update.json"
+    private val manifestUrl = "https://raw.githubusercontent.com/korczaktechnology-tech/JARVIS/main/artifacts/morok-update.json"
 
     fun check(onResult: (String) -> Unit) {
         executor.execute {
@@ -25,8 +25,9 @@ class UpdateManager(private val activity: Activity) {
                 val sha = json.optString("sha").trim()
                 val version = json.optString("version").ifBlank { "nova" }
                 val channel = json.optString("channel").trim().lowercase()
+                val buildSha = json.optString("buildSha").trim()
                 val apkUrl = json.optString("apkUrl").trim()
-                if (channel != "debug" || !apkUrl.endsWith("/morok-mobile-debug.apk") || sha.isBlank() || apkUrl.isBlank() || sha == BuildConfig.MOROK_BUILD_SHA) return@runCatching
+                if (channel != "debug" || buildSha.isBlank() || !apkUrl.endsWith("/artifacts/morok-mobile-debug.apk") || sha.isBlank() || apkUrl.isBlank() || buildSha == BuildConfig.MOROK_BUILD_SHA) return@runCatching
                 val apk = downloadApk(apkUrl, sha)
                 verifySha256(apk, sha)
                 activity.runOnUiThread { onResult("READY:$version:${apk.absolutePath}") }
