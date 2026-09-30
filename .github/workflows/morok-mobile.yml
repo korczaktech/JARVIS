@@ -44,7 +44,7 @@ jobs:
 
       - name: Build debug APK
         env:
-          MOROK_KEYSTORE_FILE: ${{ runner.temp }}/morok-release.keystore
+          MOROK_KEYSTORE_FILE: ${{ runner.temp }}/morok-debug.keystore
           MOROK_KEYSTORE_PASSWORD: ${{ secrets.MOROK_RELEASE_KEYSTORE_PASSWORD }}
           MOROK_KEY_ALIAS: ${{ secrets.MOROK_RELEASE_KEY_ALIAS }}
           MOROK_KEY_PASSWORD: ${{ secrets.MOROK_RELEASE_KEY_PASSWORD }}
@@ -52,10 +52,10 @@ jobs:
 
       - name: Prepare debug assets
         run: |
-          mkdir -p "${{ runner.temp }}/morok-release"
-          cp app/build/outputs/apk/debug/*.apk "${{ runner.temp }}/morok-release/morok-debug.apk"
-          sha256sum "${{ runner.temp }}/morok-release/morok-debug.apk" | awk '{print $1}' > "${{ runner.temp }}/morok-release/morok-debug.sha256"
-          echo "${{ github.sha }}" > "${{ runner.temp }}/morok-release/build-sha.txt"
+          mkdir -p "${{ runner.temp }}/morok-debug"
+          cp app/build/outputs/apk/debug/*.apk "${{ runner.temp }}/morok-debug/morok-debug.apk"
+          sha256sum "${{ runner.temp }}/morok-debug/morok-debug.apk" | awk '{print $1}' > "${{ runner.temp }}/morok-debug/morok-debug.sha256"
+          echo "${{ github.sha }}" > "${{ runner.temp }}/morok-debug/build-sha.txt"
 
       - name: Replace debug release
         env:
@@ -70,6 +70,6 @@ jobs:
             --title "Morok Debug App" \
             --prerelease \
             --notes "Morok Mobile debug build. Commit: ${{ github.sha }}" \
-            "${{ runner.temp }}/morok-release/morok-debug.apk#morok-debug.apk" \
-            "${{ runner.temp }}/morok-release/morok-debug.sha256#morok-debug.sha256" \
-            "${{ runner.temp }}/morok-release/build-sha.txt#build-sha.txt"
+            "${{ runner.temp }}/morok-debug/morok-debug.apk#morok-debug.apk" \
+            "${{ runner.temp }}/morok-debug/morok-debug.sha256#morok-debug.sha256" \
+            "${{ runner.temp }}/morok-debug/build-sha.txt#build-sha.txt"
