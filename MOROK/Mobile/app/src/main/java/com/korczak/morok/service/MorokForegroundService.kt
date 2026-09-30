@@ -36,7 +36,6 @@ class MorokForegroundService:Service(){
   listening=true
   consecutiveErrors=0
   recreateRecognizer()
-  listenNow()
  }
  private fun recreateRecognizer(){
   generation++
@@ -44,17 +43,16 @@ class MorokForegroundService:Service(){
   val localGeneration=generation
   recognizer=SpeechRecognizer.createSpeechRecognizer(this).also{r->
    r.setRecognitionListener(object:RecognitionListener{
-    override fun onResults(b:Bundle){handle(b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull());restart()}
-    override fun onError(e:Int){restart()}
-    override fun onReadyForSpeech(p:Bundle?){}
-    override fun onBeginningOfSpeech(){}
-    override fun onRmsChanged(v:Float){}
-    override fun onBufferReceived(b:ByteArray?){}
-    override fun onEndOfSpeech(){}
-    override fun onPartialResults(b:Bundle){val s=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(s!=null&&isWake(s)){}}
+    override fun onResults(b:Bundle){if(localGeneration!=generation||!listening)return;consecutiveErrors=0;handle(b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull());scheduleRestart(150)}
+    override fun onError(e:Int){if(localGeneration!=generation||!listening)return;consecutiveErrors++;broadcast("ASR_ERROR:$e:"+errorName(e));scheduleRestart(if(e==SpeechRecognizer.ERROR_RECOGNIZER_BUSY)1000 else 600)}
+    override fun onReadyForSpeech(p:Bundle?){if(localGeneration==generation&&listening)broadcast("MIC_OK:Reconhecedor pronto.")}
+    override fun onBeginningOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fala detectada.")}
+    override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;broadcast("AUDIO_LEVEL:$v")}}
+    override fun onBufferReceived(b:ByteArray?){if(localGeneration==generation&&!b.isNullOrEmpty())broadcast("MIC_BUFFER:"+b.size)}
+    override fun onEndOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fim da fala.")}
+    override fun onPartialResults(b:Bundle){if(localGeneration!=generation||!listening)return;val s=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(s!=null){broadcast("ASR_PARTIAL:$s");if(isWake(s)){val cmd=wakeCommand(s);if(cmd.isNotBlank())handle(s);else{awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");speak("Fale seu comando.")}}}}}
     override fun onEvent(t:Int,p:Bundle?){}
-   })
-  }
+   })  }
   listenNow()
  }
  private fun scheduleRestart(delay:Long){if(!listening||restarting)return;restarting=true;Handler(Looper.getMainLooper()).postDelayed({restarting=false;if(listening){recreateRecognizer();listenNow()}},delay)}
