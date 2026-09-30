@@ -23,6 +23,7 @@ class MorokForegroundService:Service(){
  private var generation=0
  private var lastAudioLevel=0f
  private var consecutiveErrors=0
+ private var partialCommandHandled=false
  private var tts:android.speech.tts.TextToSpeech?=null
  override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")};startListening()}
  override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{if(!listening)startListening();return START_STICKY}
@@ -44,14 +45,14 @@ class MorokForegroundService:Service(){
   val localGeneration=generation
   recognizer=SpeechRecognizer.createSpeechRecognizer(this).also{r->
    r.setRecognitionListener(object:RecognitionListener{
-    override fun onResults(b:Bundle){if(localGeneration!=generation||!listening)return;consecutiveErrors=0;handle(b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull());scheduleRestart(150)}
+    override fun onResults(b:Bundle){if(localGeneration!=generation||!listening)return;consecutiveErrors=0;val text=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(!partialCommandHandled)handle(text);partialCommandHandled=false;scheduleRestart(150)}
     override fun onError(e:Int){if(localGeneration!=generation||!listening)return;consecutiveErrors++;broadcast("ASR_ERROR:$e:"+errorName(e));scheduleRestart(if(e==SpeechRecognizer.ERROR_RECOGNIZER_BUSY)1000 else 600)}
     override fun onReadyForSpeech(p:Bundle?){if(localGeneration==generation&&listening)broadcast("MIC_OK:Reconhecedor pronto.")}
     override fun onBeginningOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fala detectada.")}
     override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;broadcast("AUDIO_LEVEL:$v")}}
     override fun onBufferReceived(b:ByteArray?){if(localGeneration==generation&&!b.isNullOrEmpty())broadcast("MIC_BUFFER:"+b.size)}
     override fun onEndOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fim da fala.")}
-    override fun onPartialResults(b:Bundle){if(localGeneration!=generation||!listening)return;val s=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(s!=null){broadcast("ASR_PARTIAL:$s");if(isWake(s)){val cmd=wakeCommand(s);if(cmd.isNotBlank())handle(s);else{awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");speak("Fale seu comando.")}}}}}
+    override fun onPartialResults(b:Bundle){if(localGeneration!=generation||!listening)return;val s=b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull();if(s!=null){broadcast("ASR_PARTIAL:$s");if(isWake(s)){val cmd=wakeCommand(s);if(cmd.isNotBlank()){partialCommandHandled=true;handle(s)}else{awaitingCommand=true;showOverlay("MOROK\\nFale seu comando…");speak("Fale seu comando.")}}}}}
     override fun onEvent(t:Int,p:Bundle?){}
    })  }
   listenNow()
