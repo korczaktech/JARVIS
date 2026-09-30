@@ -40,7 +40,7 @@ jobs:
         env:
           MOROK_RELEASE_KEYSTORE_BASE64: ${{ secrets.MOROK_RELEASE_KEYSTORE_BASE64 }}
         run: |
-          echo "$MOROK_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/morok-release.keystore"
+          echo "$MOROK_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/morok-debug.keystore"
 
       - name: Build debug APK
         env:
@@ -48,7 +48,7 @@ jobs:
           MOROK_KEYSTORE_PASSWORD: ${{ secrets.MOROK_RELEASE_KEYSTORE_PASSWORD }}
           MOROK_KEY_ALIAS: ${{ secrets.MOROK_RELEASE_KEY_ALIAS }}
           MOROK_KEY_PASSWORD: ${{ secrets.MOROK_RELEASE_KEY_PASSWORD }}
-        run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" assembleDebug
+        run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" -PMOROK_VERSION_CODE="${{ github.run_number }}" -PMOROK_VERSION_NAME="0.0.${{ github.run_number }}-debug" assembleDebug
 
       - name: Prepare debug assets
         run: |
@@ -67,7 +67,7 @@ jobs:
           gh release delete v0.0.3 --cleanup-tag --yes 2>/dev/null || true
           gh release create morok-debug \
             --target "${{ github.sha }}" \
-            --title "Morok Debug" \
+            --title "Morok Debug App" \
             --prerelease \
             --notes "Morok Mobile debug build. Commit: ${{ github.sha }}" \
             "${{ runner.temp }}/morok-release/morok-debug.apk#morok-debug.apk" \
