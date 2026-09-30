@@ -7,6 +7,7 @@ import com.korczak.morok.service.MorokForegroundService
 class MorokVoiceInteractionService : VoiceInteractionService() {
     override fun onReady() {
         super.onReady()
-        runCatching { startForegroundService(Intent(this, MorokForegroundService::class.java)) }
+        // O serviço não abre o microfone ao ficar pronto. O Android só chama a sessão
+        // quando o usuário invoca o assistente; a sessão então inicia uma captura única.
     }
 }
