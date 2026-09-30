@@ -48,7 +48,7 @@ class MainActivity:ComponentActivity(){
    CommandAction.OpenFiles->startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE))
    CommandAction.OpenNotifications->startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
    CommandAction.OpenDateSettings->startActivity(Intent(Settings.ACTION_DATE_SETTINGS))
-   CommandAction.OpenTimeSettings->startActivity(Intent(Settings.ACTION_TIME_SETTINGS))
+   CommandAction.OpenTimeSettings->startActivity(Intent(Settings.ACTION_DATE_SETTINGS))
    CommandAction.StorageSettings->startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS))
    CommandAction.OpenNetworkSettings->startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
    CommandAction.OpenDisplaySettings->startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS))
