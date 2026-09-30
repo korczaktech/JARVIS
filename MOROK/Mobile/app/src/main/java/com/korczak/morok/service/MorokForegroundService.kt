@@ -15,7 +15,7 @@ import java.util.Locale
 import java.text.Normalizer
 
 class MorokForegroundService:Service(){
- companion object{const val CHANNEL_ID="morok_assistant";const val NOTIFICATION_ID=1001;const val ACTION_RESULT="com.korczak.morok.COMMAND_RESULT";const val EXTRA_TEXT="text";const val ACTION_CONFIRM="com.korczak.morok.CONFIRM";const val ACTION_CANCEL="com.korczak.morok.CANCEL";fun confirmPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CONFIRM))};fun cancelPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CANCEL))}
+ companion object{const val CHANNEL_ID="morok_assistant";const val NOTIFICATION_ID=1001;const val ACTION_RESULT="com.korczak.morok.COMMAND_RESULT";const val EXTRA_TEXT="text";const val ACTION_CONFIRM="com.korczak.morok.CONFIRM";const val ACTION_CANCEL="com.korczak.morok.CANCEL";fun confirmPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CONFIRM))};fun cancelPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CANCEL))}}
  private val router=CommandRouter()
  private var recognizer:SpeechRecognizer?=null
  private var listening=false
