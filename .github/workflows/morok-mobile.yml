@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 jobs:
   verify:
@@ -65,7 +67,18 @@ jobs:
             MOROK/Mobile/app/build/outputs/apk/debug/morok-commit.txt
             MOROK/Mobile/app/build/outputs/apk/debug/morok-run.txt
             MOROK/Mobile/app/build/outputs/apk/debug/morok-source.txt
-      - uses: actions/upload-artifact@v4
+      - name: Prepare public debug updater
+        run: |
+          rm -rf /tmp/morok-pages
+          mkdir -p /tmp/morok-pages
+          cp app/build/outputs/apk/debug/*.apk /tmp/morok-pages/morok-mobile-debug.apk
+          sha256sum /tmp/morok-pages/morok-mobile-debug.apk | awk '{print $1}' > /tmp/morok-pages/morok-mobile-debug.sha256
+          SHA=$(cat /tmp/morok-pages/morok-mobile-debug.sha256)
+          printf '{"version":"0.0.1-debug","sha":"%s","apkUrl":"https://korczaktechnology-tech.github.io/JARVIS/morok-mobile-debug.apk"}
+' "$SHA" > /tmp/morok-pages/morok-update.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
-          name: morok-mobile-release
-          path: MOROK/Mobile/app/build/outputs/apk/release/*.apk
+          path: /tmp/morok-pages
+      - id: deployment
+        uses: actions/deploy-pages@v4
