@@ -12,9 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 jobs:
   verify:
@@ -62,17 +60,14 @@ jobs:
           path: |
             MOROK/Mobile/app/build/outputs/apk/debug/morok-mobile-debug.apk
             MOROK/Mobile/app/build/outputs/apk/debug/morok-mobile-debug.sha256
-      - name: Prepare public debug updater
+      - name: Publish debug updater files
         run: |
-          rm -rf /tmp/morok-pages
-          mkdir -p /tmp/morok-pages
-          cp app/build/outputs/apk/debug/morok-mobile-debug.apk /tmp/morok-pages/morok-mobile-debug.apk
-          cp app/build/outputs/apk/debug/morok-mobile-debug.sha256 /tmp/morok-pages/morok-mobile-debug.sha256
-          SHA=$(cat /tmp/morok-pages/morok-mobile-debug.sha256)
-          printf '{"version":"debug","channel":"debug","sha":"%s","apkUrl":"https://korczaktechnology-tech.github.io/JARVIS/morok-mobile-debug.apk"}\n' "$SHA" > /tmp/morok-pages/morok-update.json
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: /tmp/morok-pages
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          mkdir -p artifacts
+          cp app/build/outputs/apk/debug/morok-mobile-debug.apk artifacts/morok-mobile-debug.apk
+          SHA=$(cat app/build/outputs/apk/debug/morok-mobile-debug.sha256)
+          printf '{"version":"debug","channel":"debug","buildSha":"%s","sha":"%s","apkUrl":"https://raw.githubusercontent.com/korczaktechnology-tech/JARVIS/main/artifacts/morok-mobile-debug.apk"}\n' "${{ github.sha }}" "$SHA" > artifacts/morok-update.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/morok-mobile-debug.apk artifacts/morok-update.json
+          git diff --cached --quiet || git commit -m "build(morok-mobile): publish debug updater"
+          git push
