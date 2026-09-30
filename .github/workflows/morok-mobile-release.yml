@@ -1,0 +1,89 @@
+name: Morok Mobile Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "MOROK/Mobile/**"
+      - ".github/workflows/morok-mobile-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: morok-mobile-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Calculate next semantic version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          latest="$(gh release list --repo "${GITHUB_REPOSITORY}" --limit 1 --json tagName --jq '.[0].tagName' || true)"
+          latest="${latest#v}"
+          if [ -z "$latest" ]; then
+            major=0; minor=0; patch=0
+          else
+            IFS=. read -r major minor patch <<< "$latest"
+            major=${major:-0}; minor=${minor:-0}; patch=${patch:-0}
+          fi
+          patch=$((patch + 1))
+          version="${major}.${minor}.${patch}"
+          code=$((major * 1000000 + minor * 1000 + patch))
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Require persistent release signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.MOROK_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::Configure MOROK_RELEASE_KEYSTORE_BASE64 before publishing releases. A persistent signing key is required for Android updates."
+            exit 1
+          fi
+
+      - name: Decode release keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.MOROK_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/morok-release.jks"
+
+      - name: Build signed release
+        working-directory: MOROK/Mobile
+        env:
+          MOROK_KEYSTORE_FILE: ${{ runner.temp }}/morok-release.jks
+          MOROK_KEYSTORE_PASSWORD: ${{ secrets.MOROK_RELEASE_KEYSTORE_PASSWORD }}
+          MOROK_KEY_ALIAS: ${{ secrets.MOROK_RELEASE_KEY_ALIAS }}
+          MOROK_KEY_PASSWORD: ${{ secrets.MOROK_RELEASE_KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon assembleRelease -PMOROK_VERSION_NAME="${{ steps.version.outputs.version }}" -PMOROK_VERSION_CODE="${{ steps.version.outputs.code }}"
+
+      - name: Prepare release assets
+        working-directory: MOROK/Mobile
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/morok-mobile.apk"
+          sha256sum "$RUNNER_TEMP/morok-mobile.apk" | awk '{print $1}' > "$RUNNER_TEMP/morok-mobile.sha256"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}"             "$RUNNER_TEMP/morok-mobile.apk#morok-mobile.apk"             "$RUNNER_TEMP/morok-mobile.sha256#morok-mobile.sha256"             --repo "${GITHUB_REPOSITORY}"             --target "${GITHUB_SHA}"             --title "Morok Mobile v${{ steps.version.outputs.version }}"             --generate-notes
+
+      - name: Cleanup signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/morok-release.jks"
