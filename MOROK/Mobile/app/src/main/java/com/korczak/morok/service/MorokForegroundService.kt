@@ -15,7 +15,7 @@ import java.util.Locale
 import java.text.Normalizer
 
 class MorokForegroundService:Service(){
- companion object{const val CHANNEL_ID="morok_assistant";const val NOTIFICATION_ID=1001;const val ACTION_RESULT="com.korczak.morok.COMMAND_RESULT";const val EXTRA_TEXT="text"}
+ companion object{const val CHANNEL_ID="morok_assistant";const val NOTIFICATION_ID=1001;const val ACTION_RESULT="com.korczak.morok.COMMAND_RESULT";const val EXTRA_TEXT="text";const val ACTION_CONFIRM="com.korczak.morok.CONFIRM";const val ACTION_CANCEL="com.korczak.morok.CANCEL";fun confirmPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CONFIRM))};fun cancelPending(c:Context){c.startService(Intent(c,MorokForegroundService::class.java).setAction(ACTION_CANCEL))}
  private val router=CommandRouter()
  private var recognizer:SpeechRecognizer?=null
  private var listening=false
@@ -27,8 +27,9 @@ class MorokForegroundService:Service(){
  private var consecutiveErrors=0
  private var partialCommandHandled=false
  private var tts:android.speech.tts.TextToSpeech?=null
+ private var pendingAction:CommandAction?=null
  override fun onCreate(){super.onCreate();getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,getString(R.string.service_channel_name),NotificationManager.IMPORTANCE_LOW));startForeground(NOTIFICATION_ID,notification());tts=android.speech.tts.TextToSpeech(this){if(it==android.speech.tts.TextToSpeech.SUCCESS)tts?.language=Locale("pt","BR")};startListening()}
- override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{if(!listening)startListening();return START_STICKY}
+ override fun onStartCommand(i:Intent?,f:Int,s:Int):Int{when(i?.action){ACTION_CONFIRM->{pendingAction?.let{a->pendingAction=null;execute(a);broadcast("Comando confirmado.");speak("Comando confirmado.")}};ACTION_CANCEL->{pendingAction=null;broadcast("Comando cancelado.");speak("Comando cancelado.")}};if(!listening)startListening();return START_STICKY}
  override fun onDestroy(){listening=false;generation++;Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null);destroyRecognizer();tts?.shutdown();tts=null;super.onDestroy()}
  override fun onBind(i:Intent?):IBinder?=null
  private fun notification():Notification=NotificationCompat.Builder(this,CHANNEL_ID).setContentTitle(getString(R.string.app_name)).setContentText("Morok ouvindo “Morok” em segundo plano.").setSmallIcon(android.R.drawable.ic_btn_speak_now).setOngoing(true).build()
@@ -98,7 +99,7 @@ class MorokForegroundService:Service(){
   val result=router.route(command,CommandSource.VOICE)
   when(result){
    is CommandResult.Success->{execute(result.action);broadcast(result.message);speak(result.message)}
-   is CommandResult.RequiresConfirmation->broadcast("Confirmação necessária: "+result.message)
+   is CommandResult.RequiresConfirmation->{pendingAction=result.action;broadcast("CONFIRMATION:"+result.message)}
    is CommandResult.Failure->{broadcast(result.message);speak(result.message)}
    is CommandResult.NeedsPermission->broadcast("Permissão necessária: "+result.permission)
   }
