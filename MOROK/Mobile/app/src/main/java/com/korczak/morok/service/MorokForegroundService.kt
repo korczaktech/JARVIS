@@ -5,6 +5,7 @@ import android.app.*
 import android.content.*
 import android.media.AudioManager
 import android.os.*
+import android.view.KeyEvent
 import android.provider.Settings
 import android.speech.*
 import androidx.core.app.NotificationCompat
