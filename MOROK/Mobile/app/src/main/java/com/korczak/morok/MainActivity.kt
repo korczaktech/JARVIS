@@ -21,13 +21,15 @@ import com.korczak.morok.service.MorokForegroundService
 import com.korczak.morok.service.MorokOverlayService
 import com.korczak.morok.update.UpdateManager
 import org.json.JSONObject
+import java.text.Normalizer
+import java.util.Locale
 
 class MainActivity:ComponentActivity(){
  private val router=CommandRouter()
  private lateinit var webView:WebView
  private lateinit var updateManager:UpdateManager
  private val permissionLauncher=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){startAssistantService()}
- private val receiver=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){val m=i.getStringExtra(MorokForegroundService.EXTRA_TEXT)?:return;if(::webView.isInitialized)webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)}}}
+ private val receiver=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){val m=i.getStringExtra(MorokForegroundService.EXTRA_TEXT)?:return;if(::webView.isInitialized)webView.post{if(m.startsWith("MIC_")||m.startsWith("ASR_")||m.startsWith("MIC_LEVEL:"))webView.evaluateJavascript("window.MorokNative?.voiceDebug("+JSONObject.quote(m)+");",null)else webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)}}}
  override fun onCreate(savedInstanceState:Bundle?){
   super.onCreate(savedInstanceState)
   webView=WebView(this).apply{settings.javaScriptEnabled=true;settings.domStorageEnabled=true;settings.allowFileAccess=true;settings.allowContentAccess=true;webViewClient=WebViewClient();webChromeClient=WebChromeClient();addJavascriptInterface(NativeBridge(),"MorokNative");setBackgroundColor(android.graphics.Color.BLACK)}
@@ -52,6 +54,14 @@ class MainActivity:ComponentActivity(){
    is CommandAction.SetBrightness->{if(Settings.System.canWrite(this))Settings.System.putInt(contentResolver,Settings.System.SCREEN_BRIGHTNESS,255*a.percent/100)else startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS,android.net.Uri.parse("package:$packageName")))}
    is CommandAction.SetRingerMode->{val am=getSystemService(AUDIO_SERVICE) as AudioManager;am.ringerMode=when(a.mode){CommandAction.RingerMode.NORMAL->AudioManager.RINGER_MODE_NORMAL;CommandAction.RingerMode.VIBRATE->AudioManager.RINGER_MODE_VIBRATE;CommandAction.RingerMode.SILENT->AudioManager.RINGER_MODE_SILENT}}
    is CommandAction.OpenUrl->startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse(a.url)))
+   is CommandAction.OpenApp->openApp(a.query)
+   CommandAction.OpenAppList->startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME))
+   CommandAction.AccessibilityBack->if(!MorokAccessibilityService.back())startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+   CommandAction.AccessibilityHome->if(!MorokAccessibilityService.home())startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+   CommandAction.AccessibilityRecents->if(!MorokAccessibilityService.recents())startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+   is CommandAction.AccessibilityClick->if(!MorokAccessibilityService.clickText(a.text)){}
+   is CommandAction.AccessibilityType->if(!MorokAccessibilityService.typeText(a.text)){}
+
    CommandAction.OpenSettings->startActivity(Intent(Settings.ACTION_SETTINGS))
    CommandAction.OpenWifiSettings->startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
    CommandAction.OpenBluetoothSettings->startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
@@ -87,6 +97,13 @@ class MainActivity:ComponentActivity(){
   @JavascriptInterface fun requestOverlay(){requestOverlayPermission()}
   @JavascriptInterface fun requestAssistant(){requestAssistantRole()}
   @JavascriptInterface fun startVoice(){webView.post{webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('morok-voice-start'));",null)}}
+ }
+ private fun openApp(query:String){
+  val intent=Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+  val apps=packageManager.queryIntentActivities(intent,0)
+  val q=Normalizer.normalize(query.lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").trim()
+  val match=apps.firstOrNull{Normalizer.normalize(packageManager.getApplicationLabel(it.activityInfo.applicationInfo).toString().lowercase(Locale.ROOT),Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").contains(q)}
+  match?.let{startActivity(packageManager.getLaunchIntentForPackage(it.activityInfo.packageName))}
  }
  override fun onDestroy(){unregisterReceiver(receiver);webView.removeJavascriptInterface("MorokNative");webView.destroy();super.onDestroy()}
 }
