@@ -50,7 +50,7 @@ class MorokForegroundService:Service(){
     override fun onReadyForSpeech(p:Bundle?){if(localGeneration==generation&&listening)broadcast("MIC_OK:Reconhecedor pronto.")}
     override fun onBeginningOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fala detectada.")}
     override fun onRmsChanged(v:Float){if(localGeneration==generation&&listening){lastAudioLevel=v;broadcast("AUDIO_LEVEL:$v")}}
-    override fun onBufferReceived(b:ByteArray?){if(localGeneration==generation&&!b.isNullOrEmpty())broadcast("MIC_BUFFER:"+b.size)}
+    override fun onBufferReceived(b:ByteArray?){if(localGeneration==generation&&listening&&b!=null&&b.isNotEmpty())broadcast("MIC_BUFFER:"+b.size)}
     override fun onEndOfSpeech(){if(localGeneration==generation&&listening)broadcast("MIC_AUDIO:Fim da fala.")}
     override fun onPartialResults(b:Bundle) {
      if (localGeneration != generation || !listening) return
