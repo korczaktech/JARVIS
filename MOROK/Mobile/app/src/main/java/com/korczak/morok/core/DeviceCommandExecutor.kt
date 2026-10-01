@@ -9,6 +9,7 @@ import com.korczak.morok.service.MorokAccessibilityService
 import java.text.Normalizer
 import java.util.Locale
 class DeviceCommandExecutor(private val context: Context) {
+    private val permissions = PermissionManager(context)
     fun execute(action: CommandAction): ExecutionResult = try {
         when (action) {
             CommandAction.None -> ok("Nenhuma ação necessária.")
@@ -67,7 +68,7 @@ class DeviceCommandExecutor(private val context: Context) {
     }
     private fun setBrightness(percent: Int): ExecutionResult {
         val value = percent.coerceIn(0, 100)
-        if (!Settings.System.canWrite(context)) return ExecutionResult.NeedsPermission("WRITE_SETTINGS", "controle de brilho")
+        if (!permissions.canWriteSettings()) return ExecutionResult.NeedsPermission("WRITE_SETTINGS", "controle de brilho")
         Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 255 * value / 100); return ok("Brilho definido em ${value}%.")
     }
     private fun setRinger(mode: CommandAction.RingerMode): ExecutionResult {
@@ -76,7 +77,7 @@ class DeviceCommandExecutor(private val context: Context) {
         return ok("Modo de toque alterado.")
     }
     private fun accessibility(label: String, operation: () -> Boolean): ExecutionResult {
-        if (!MorokAccessibilityService.isEnabled()) return ExecutionResult.NeedsPermission("ACCESSIBILITY", label)
+        if (!permissions.hasAccessibility()) return ExecutionResult.NeedsPermission("ACCESSIBILITY", label)
         return if (operation()) ok("${label} executado.") else ExecutionResult.Failure("Não foi possível executar: ${label}.")
     }
     private fun settings(action: String, message: String, data: Uri? = null): ExecutionResult {
