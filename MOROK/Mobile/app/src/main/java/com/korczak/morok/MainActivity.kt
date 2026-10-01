@@ -29,6 +29,7 @@ import java.util.Locale
 class MainActivity:ComponentActivity(){
  private val router=CommandRouter()
  private val audit=AuditLogger()
+ private val permissionManager=PermissionManager(this)
  private lateinit var pipeline:CommandExecutionPipeline
  private lateinit var webView:WebView
  private lateinit var updateManager:UpdateManager
@@ -45,7 +46,7 @@ class MainActivity:ComponentActivity(){
   ContextCompat.registerReceiver(this,receiver,IntentFilter(MorokForegroundService.ACTION_RESULT),ContextCompat.RECEIVER_NOT_EXPORTED)
   requestBasePermissions()
  }
- private fun requestBasePermissions(){val p=buildList{add(Manifest.permission.RECORD_AUDIO);if(Build.VERSION.SDK_INT>=33)add(Manifest.permission.POST_NOTIFICATIONS)};permissionLauncher.launch(p.toTypedArray())}
+ private fun requestBasePermissions(){permissionLauncher.launch(permissionManager.missingRuntimePermissions())}
  private fun startAssistantService(){if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){return};if(getSharedPreferences("morok",MODE_PRIVATE).getBoolean("auto_updates",true))checkForUpdates()}
  private fun requestOverlayPermission(){if(Build.VERSION.SDK_INT>=23&&!Settings.canDrawOverlays(this))startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,android.net.Uri.parse("package:$packageName")))}
  private fun requestAssistantRole(){if(Build.VERSION.SDK_INT>=29){val rm=getSystemService(RoleManager::class.java);if(rm.isRoleAvailable(RoleManager.ROLE_ASSISTANT)&&!rm.isRoleHeld(RoleManager.ROLE_ASSISTANT))runCatching{startActivityForResult(rm.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT),401)}}}
