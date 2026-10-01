@@ -105,5 +105,5 @@ class DeviceCommandExecutor(private val context: Context) {
         val clean = number?.trim().orEmpty(); if (clean.isBlank()) return ExecutionResult.Failure("Número inválido.")
         return open(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${Uri.encode(clean)}")).apply { putExtra("sms_body", body) }, "Abrindo mensagem.")
     }
-    private fun normalize(value: String): String = Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD).replace(Regex("\p{M}+"), "").trim()
+    private fun normalize(value: String): String = Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").trim()
 }
