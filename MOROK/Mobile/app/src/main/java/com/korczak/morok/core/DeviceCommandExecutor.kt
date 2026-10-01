@@ -8,7 +8,7 @@ import android.view.KeyEvent
 import com.korczak.morok.service.MorokAccessibilityService
 import java.text.Normalizer
 import java.util.Locale
-class DeviceCommandExecutor(private val context: Context) {
+class DeviceCommandExecutor(val context: Context) {
     private val permissions = PermissionManager(context)
     fun execute(action: CommandAction): ExecutionResult = try {
         when (action) {
