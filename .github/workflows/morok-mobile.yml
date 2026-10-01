@@ -50,6 +50,15 @@ jobs:
           MOROK_KEY_PASSWORD: ${{ secrets.MOROK_RELEASE_KEY_PASSWORD }}
         run: gradle --no-daemon -PMOROK_BUILD_SHA="${{ github.sha }}" -PMOROK_VERSION_CODE="${{ github.run_number }}" -PMOROK_VERSION_NAME="0.0.${{ github.run_number }}-debug" assembleDebug
 
+      - name: Validate debug APK before publishing
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          AAPT2=$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f | sort | tail -1)
+          test -n "$AAPT2"
+          "$AAPT2" dump badging "$APK" | tee "$RUNNER_TEMP/morok-badging.txt"
+          grep -q "package: name='com.korczak.morok'" "$RUNNER_TEMP/morok-badging.txt"
+          grep -q "application-label:'Morok'" "$RUNNER_TEMP/morok-badging.txt"
+          grep -q -- "-debug" "$RUNNER_TEMP/morok-badging.txt"
       - name: Prepare debug assets
         run: |
           mkdir -p "${{ runner.temp }}/morok-debug"
@@ -62,6 +71,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete morok-debug --cleanup-tag --yes 2>/dev/null || true
+          gh release delete morok-release --cleanup-tag --yes 2>/dev/null || true
           gh release delete v0.0.1 --cleanup-tag --yes 2>/dev/null || true
           gh release delete v0.0.2 --cleanup-tag --yes 2>/dev/null || true
           gh release delete v0.0.3 --cleanup-tag --yes 2>/dev/null || true
