@@ -28,6 +28,8 @@ import java.util.Locale
 
 class MainActivity:ComponentActivity(){
  private val router=CommandRouter()
+ private val audit=AuditLogger()
+ private lateinit var pipeline:CommandExecutionPipeline
  private lateinit var webView:WebView
  private lateinit var updateManager:UpdateManager
  private val permissionLauncher=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()){startAssistantService()}
@@ -37,6 +39,7 @@ class MainActivity:ComponentActivity(){
   webView=WebView(this).apply{settings.javaScriptEnabled=true;settings.domStorageEnabled=true;settings.allowFileAccess=true;settings.allowContentAccess=true;webViewClient=WebViewClient();webChromeClient=WebChromeClient();addJavascriptInterface(NativeBridge(),"MorokNative");setBackgroundColor(android.graphics.Color.BLACK)}
   setContentView(webView);webView.loadUrl("file:///android_asset/frontend/index.html")
   updateManager=UpdateManager(this)
+  pipeline=CommandExecutionPipeline(router,DeviceCommandExecutor(this),audit)
   requestOverlayPermission()
   requestAssistantRole()
   ContextCompat.registerReceiver(this,receiver,IntentFilter(MorokForegroundService.ACTION_RESULT),ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -90,7 +93,14 @@ class MainActivity:ComponentActivity(){
    val stat=android.os.StatFs(android.os.Environment.getDataDirectory().path)
    val total=stat.totalBytes;val free=stat.availableBytes;val used=total-free
    return JSONObject().apply{put("battery",bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY));put("sdk",Build.VERSION.SDK_INT);put("model",Build.MODEL);put("appVersion",BuildConfig.VERSION_NAME);put("versionCode",BuildConfig.VERSION_CODE);put("packageName",packageName);put("storageTotal",total);put("storageFree",free);put("storageUsed",used);put("storagePercent",if(total>0)used*100.0/total else 0.0);put("ramTotal",mi.totalMem);put("ramAvailable",mi.availMem);put("ramPercent",if(mi.totalMem>0)(mi.totalMem-mi.availMem)*100.0/mi.totalMem else 0.0)}.toString()}
-  @JavascriptInterface fun command(text:String):String{val r=router.route(text,CommandSource.VOICE);when(r){is CommandResult.Success->runOnUiThread{execute(r.action)};is CommandResult.RequiresConfirmation->runOnUiThread{AlertDialog.Builder(this@MainActivity).setTitle("Confirmação necessária").setMessage(r.message).setPositiveButton("CONFIRMAR"){_,_->execute(r.action)}.setNegativeButton("CANCELAR",null).show()};else->{} };val m=when(r){is CommandResult.Success->r.message;is CommandResult.RequiresConfirmation->"Confirmação necessária: "+r.message;is CommandResult.NeedsPermission->"Permissão necessária: "+r.permission;is CommandResult.Failure->r.message};webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)};return m}
+  @JavascriptInterface fun command(text:String):String{
+   val routed=router.route(text,CommandSource.TEXT)
+   val result=if(routed is CommandResult.RequiresConfirmation) routed else pipeline.handle(text,CommandSource.TEXT)
+   if(result is CommandResult.RequiresConfirmation){runOnUiThread{AlertDialog.Builder(this@MainActivity).setTitle("Confirmação necessária").setMessage(result.message).setPositiveButton("CONFIRMAR"){_,_->when(val e=DeviceCommandExecutor(this@MainActivity).execute(result.action)){is ExecutionResult.Success->webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(e.message)+");",null)};is ExecutionResult.Failure->webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(e.message)+");",null)};is ExecutionResult.NeedsPermission->webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote("Permissão necessária: "+e.permission)+");",null)}}}.setNegativeButton("CANCELAR",null).show()}}
+   val m=when(result){is CommandResult.Success->result.message;is CommandResult.RequiresConfirmation->"Confirmação necessária: "+result.message;is CommandResult.NeedsPermission->"Permissão necessária: "+result.permission;is CommandResult.Failure->result.message}
+   webView.post{webView.evaluateJavascript("window.MorokNative?.commandResult("+JSONObject.quote(m)+");",null)}
+   return m
+  }
   @JavascriptInterface fun microphoneStatus():String=MicrophoneDiagnostics.probe(this@MainActivity)
   @JavascriptInterface fun setAutoUpdate(enabled:Boolean){getSharedPreferences("morok",MODE_PRIVATE).edit().putBoolean("auto_updates",enabled).apply()}
   @JavascriptInterface fun isAccessibilityEnabled():Boolean=MorokAccessibilityService.isEnabled()
