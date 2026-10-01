@@ -9,6 +9,10 @@ on:
       - ".github/workflows/morok-mobile.yml"
   workflow_dispatch:
 
+concurrency:
+  group: morok-mobile-debug
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
