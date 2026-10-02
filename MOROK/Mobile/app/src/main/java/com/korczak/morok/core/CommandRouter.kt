@@ -75,6 +75,8 @@ class CommandRouter {
                 CommandResult.Success("Abrindo localização.", CommandAction.OpenLocationSettings)
             exact("acessibilidade", "abrir acessibilidade") ->
                 CommandResult.Success("Abrindo acessibilidade.", CommandAction.OpenAccessibilitySettings)
+            exact("permissões", "abrir permissões", "permissões do morok") ->
+                CommandResult.Success("Abrindo permissões do Morok.", CommandAction.OpenAppPermissions)
             exact("configurações de data", "configuracoes de data", "data") ->
                 CommandResult.Success("Abrindo data.", CommandAction.OpenDateSettings)
             exact("configurações de hora", "configuracoes de hora", "hora") ->
