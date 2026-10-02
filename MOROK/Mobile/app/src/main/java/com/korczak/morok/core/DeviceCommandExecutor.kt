@@ -26,12 +26,34 @@ class DeviceCommandExecutor(val context: Context) {
             CommandAction.AccessibilityRecents -> accessibility("Aplicativos recentes") { MorokAccessibilityService.recents() }
             is CommandAction.AccessibilityClick -> accessibility("Clique em ${action.text}") { MorokAccessibilityService.clickText(action.text) }
             is CommandAction.AccessibilityType -> accessibility("Inserir texto") { MorokAccessibilityService.typeText(action.text) }
+            is CommandAction.AccessibilityLongClick -> accessibility("Pressão longa") { MorokAccessibilityService.longClickText(action.text) }
+            is CommandAction.AccessibilitySwipe -> accessibility("Deslizar") { MorokAccessibilityService.swipe(
+                when (action.direction) {
+                    CommandAction.SwipeDirection.LEFT -> MorokAccessibilityService.CommandSwipeDirection.LEFT
+                    CommandAction.SwipeDirection.RIGHT -> MorokAccessibilityService.CommandSwipeDirection.RIGHT
+                    CommandAction.SwipeDirection.UP -> MorokAccessibilityService.CommandSwipeDirection.UP
+                    CommandAction.SwipeDirection.DOWN -> MorokAccessibilityService.CommandSwipeDirection.DOWN
+                }
+            ) }
+            is CommandAction.AccessibilityScroll -> accessibility("Rolagem") { MorokAccessibilityService.scroll(
+                if (action.direction == CommandAction.ScrollDirection.DOWN)
+                    MorokAccessibilityService.CommandScrollDirection.DOWN
+                else
+                    MorokAccessibilityService.CommandScrollDirection.UP
+            ) }
+            CommandAction.AccessibilityClose -> accessibility("Fechar aplicativo") { MorokAccessibilityService.close() }
+            CommandAction.AccessibilityReadScreen -> {
+                val screen = MorokAccessibilityService.readScreen()
+                if (screen.isBlank()) ExecutionResult.Failure("Não foi possível ler a tela atual.")
+                else ok(screen)
+            }
             CommandAction.OpenSettings -> settings(Settings.ACTION_SETTINGS, "Abrindo configurações.")
             CommandAction.OpenWifiSettings -> settings(Settings.ACTION_WIFI_SETTINGS, "Abrindo Wi-Fi.")
             CommandAction.OpenBluetoothSettings -> settings(Settings.ACTION_BLUETOOTH_SETTINGS, "Abrindo Bluetooth.")
             CommandAction.OpenLocationSettings -> settings(Settings.ACTION_LOCATION_SOURCE_SETTINGS, "Abrindo localização.")
             CommandAction.OpenAccessibilitySettings -> settings(Settings.ACTION_ACCESSIBILITY_SETTINGS, "Abrindo acessibilidade.")
-            CommandAction.OpenAppSettings -> settings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "Abrindo configurações do Morok.", Uri.parse("package:${context.packageName}"))
+            CommandAction.OpenAppSettings -> settings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "Abrindo configurações do Morok.", Uri.parse("package:" + context.packageName))
+            CommandAction.OpenAppPermissions -> settings(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "Abrindo permissões do aplicativo.", Uri.parse("package:" + context.packageName))
             CommandAction.OpenCamera -> open(Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE), "Abrindo câmera.")
             CommandAction.OpenCalendar -> open(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CALENDAR), "Abrindo calendário.")
             CommandAction.OpenContacts -> open(Intent(Intent.ACTION_VIEW, android.provider.ContactsContract.Contacts.CONTENT_URI), "Abrindo contatos.")
