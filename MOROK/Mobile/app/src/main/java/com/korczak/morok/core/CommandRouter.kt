@@ -78,10 +78,16 @@ class CommandRouter {
                 CommandResult.Success("Volume no máximo.", CommandAction.SetVolume(100))
             exact("volume mínimo", "volume minimo", "diminuir volume ao mínimo", "diminuir o volume ao mínimo") ->
                 CommandResult.Success("Volume no mínimo.", CommandAction.SetVolume(0))
-            parsePercent(n, "volume")?.let { CommandResult.Success("Volume ajustado para $it%.", CommandAction.SetVolume(it)) } != null ->
-                parsePercent(n, "volume")!!.let { CommandResult.Success("Volume ajustado para $it%.", CommandAction.SetVolume(it)) }
-            parsePercent(n, "brilho")?.let { CommandResult.Success("Brilho ajustado para $it%.", CommandAction.SetBrightness(it)) } != null ->
-                parsePercent(n, "brilho")!!.let { CommandResult.Success("Brilho ajustado para $it%.", CommandAction.SetBrightness(it)) }
+            isVolumeCommand(n) -> {
+                val value = parsePercent(n, "volume")
+                if (value == null) CommandResult.Failure("Volume deve ficar entre 0 e 100.")
+                else CommandResult.Success("Volume ajustado para $value%.", CommandAction.SetVolume(value))
+            }
+            isBrightnessCommand(n) -> {
+                val value = parsePercent(n, "brilho")
+                if (value == null) CommandResult.Failure("Brilho deve ficar entre 0 e 100.")
+                else CommandResult.Success("Brilho ajustado para $value%.", CommandAction.SetBrightness(value))
+            }
             exact("aumentar volume", "aumente o volume", "aumentar o volume", "volume mais alto", "mais volume") ->
                 CommandResult.Success("Aumentando o volume.", CommandAction.VolumeDelta(1))
             exact("diminuir volume", "diminua o volume", "diminuir o volume", "volume mais baixo", "menos volume") ->
@@ -143,6 +149,9 @@ class CommandRouter {
         }
         return CommandResult.Failure("Use: enviar mensagem para número dizendo texto.")
     }
+
+    private fun isVolumeCommand(n: String) = Regex("^(?:defina |definir |coloque |colocar |ajuste |ajustar |aumente |aumentar |diminua |diminuir )?(?:o )?volume(?: para| em)? [0-9]{1,3}%?$").matches(n)
+    private fun isBrightnessCommand(n: String) = Regex("^(?:defina |definir |coloque |colocar |ajuste |ajustar )?(?:o )?brilho(?: da tela)?(?: para| em)? [0-9]{1,3}%?$").matches(n)
 
     private fun parsePercent(n: String, label: String): Int? {
         val pattern = when (label) {
