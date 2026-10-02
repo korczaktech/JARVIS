@@ -44,6 +44,7 @@ class CommandRouterTest {
         assertEquals(CommandAction.AccessibilityRecents, (result("apps recentes") as CommandResult.Success).action)
         assertTrue(result("clique em Configurações") is CommandResult.Success)
         assertTrue(result("toque em Continuar") is CommandResult.Success)
+        assertTrue(result("tape em Continuar") is CommandResult.Success)
         assertTrue(result("digite Korczak") is CommandResult.Success)
     }
 
