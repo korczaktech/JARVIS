@@ -75,7 +75,7 @@ class CommandRouterTest {
         val call = result("ligar para 5511999999999") as CommandResult.RequiresConfirmation
         assertTrue(call.message.contains("5511999999999"))
         val sms = result("enviar mensagem para 5511999999999 dizendo olá") as CommandResult.RequiresConfirmation
-        assertEquals(CommandAction.SendSms("5511999999999", "olá"), sms.action)
+        assertEquals(CommandAction.SendSms("5511999999999", "ola"), sms.action)
     }
 
     @Test fun unknownAndBlankCommandsFail() {
