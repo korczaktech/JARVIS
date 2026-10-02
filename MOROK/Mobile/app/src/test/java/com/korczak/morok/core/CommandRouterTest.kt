@@ -26,7 +26,7 @@ class CommandRouterTest {
     }
 
     @Test fun completeAccessibilityCommandsMapToActions() {
-        assertEquals(CommandAction.AccessibilityLongClick("Configurações"), (result("pressione e segure em Configurações") as CommandResult.Success).action)
+        assertEquals(CommandAction.AccessibilityLongClick("configuracoes"), (result("pressione e segure em Configurações") as CommandResult.Success).action)
         assertEquals(CommandAction.SwipeDirection.LEFT, ((result("deslize para a esquerda") as CommandResult.Success).action as CommandAction.AccessibilitySwipe).direction)
         assertEquals(CommandAction.SwipeDirection.RIGHT, ((result("deslize para a direita") as CommandResult.Success).action as CommandAction.AccessibilitySwipe).direction)
         assertEquals(CommandAction.SwipeDirection.UP, ((result("deslize para cima") as CommandResult.Success).action as CommandAction.AccessibilitySwipe).direction)
