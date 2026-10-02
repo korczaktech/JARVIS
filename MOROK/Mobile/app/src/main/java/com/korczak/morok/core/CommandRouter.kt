@@ -48,6 +48,24 @@ class CommandRouter {
                 CommandResult.Success("Procurando o controle.", CommandAction.AccessibilityClick(n.substringAfter(" em ").trim()))
             Regex("^(digite|escreva|insira) .+").matches(n) ->
                 CommandResult.Success("Inserindo texto.", CommandAction.AccessibilityType(n.substringAfter(" ").trim()))
+            Regex("^(pressione e segure|segure|pressione longamente|clique e segure) em .+").matches(n) ->
+                CommandResult.Success("Pressão longa.", CommandAction.AccessibilityLongClick(n.substringAfter(" em ").trim()))
+            exact("deslize para a esquerda", "deslizar para a esquerda", "arraste para a esquerda") ->
+                CommandResult.Success("Deslizando.", CommandAction.AccessibilitySwipe(CommandAction.SwipeDirection.LEFT))
+            exact("deslize para a direita", "deslizar para a direita", "arraste para a direita") ->
+                CommandResult.Success("Deslizando.", CommandAction.AccessibilitySwipe(CommandAction.SwipeDirection.RIGHT))
+            exact("deslize para cima", "deslizar para cima", "arraste para cima") ->
+                CommandResult.Success("Deslizando.", CommandAction.AccessibilitySwipe(CommandAction.SwipeDirection.UP))
+            exact("deslize para baixo", "deslizar para baixo", "arraste para baixo") ->
+                CommandResult.Success("Deslizando.", CommandAction.AccessibilitySwipe(CommandAction.SwipeDirection.DOWN))
+            exact("role para cima", "rolar para cima", "subir a tela") ->
+                CommandResult.Success("Rolando para cima.", CommandAction.AccessibilityScroll(CommandAction.ScrollDirection.UP))
+            exact("role para baixo", "rolar para baixo", "descer a tela") ->
+                CommandResult.Success("Rolando para baixo.", CommandAction.AccessibilityScroll(CommandAction.ScrollDirection.DOWN))
+            exact("fechar aplicativo", "fechar app", "sair do aplicativo", "fechar o aplicativo") ->
+                CommandResult.Success("Fechando o aplicativo atual.", CommandAction.AccessibilityClose)
+            exact("ler tela", "leia a tela", "ler a tela", "o que está na tela", "o que esta na tela") ->
+                CommandResult.Success("Lendo a tela.", CommandAction.AccessibilityReadScreen)
 
             exact("wifi", "wi-fi", "abrir wifi", "abrir wi-fi", "configurar wifi") ->
                 CommandResult.Success("Abrindo configurações de Wi-Fi.", CommandAction.OpenWifiSettings)
@@ -73,6 +91,8 @@ class CommandRouter {
                 CommandResult.Success("Abrindo notificações.", CommandAction.OpenNotifications)
             exact("configurações do aplicativo", "configuracoes do aplicativo", "configurações do morok", "configuracoes do morok") ->
                 CommandResult.Success("Abrindo configurações do Morok.", CommandAction.OpenAppSettings)
+            exact("permissões do aplicativo", "permissoes do aplicativo", "permissões do morok", "permissoes do morok", "abrir permissões") ->
+                CommandResult.Success("Abrindo permissões do aplicativo.", CommandAction.OpenAppPermissions)
 
             exact("volume máximo", "volume maximo", "aumentar volume ao máximo", "aumentar o volume ao máximo") ->
                 CommandResult.Success("Volume no máximo.", CommandAction.SetVolume(100))
