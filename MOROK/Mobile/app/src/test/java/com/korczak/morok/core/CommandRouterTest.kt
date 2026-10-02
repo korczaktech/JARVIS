@@ -5,12 +5,81 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CommandRouterTest {
- private val router=CommandRouter()
- @Test fun statusCommandIsHandled(){assertEquals(CommandResult.Success("Morok está ativo."),router.route("status",CommandSource.TEXT))}
- @Test fun blankCommandFails(){assertTrue(router.route("   ",CommandSource.TEXT) is CommandResult.Failure)}
- @Test fun cameraExecutesWithoutConfirmation(){assertTrue(router.route("abrir câmera",CommandSource.VOICE) is CommandResult.Success)}
- @Test fun naturalLanternVariationsExecute(){for(c in listOf("ligar lanterna","ligar a lanterna","Morok, ligar a lanterna","morok ligar a lanterna","acender a lanterna"))assertTrue(c,router.route(c,CommandSource.VOICE) is CommandResult.Success)}
- @Test fun accentsAndArticlesAreIgnored(){assertTrue(router.route("MOROK, configurações",CommandSource.VOICE) is CommandResult.Success);assertTrue(router.route("abrir o wi-fi",CommandSource.VOICE) is CommandResult.Success)}
- @Test fun percentCommandsParseVariations(){assertEquals(CommandAction.SetVolume(50),(router.route("coloque o volume para 50%",CommandSource.VOICE) as CommandResult.Success).action);assertEquals(CommandAction.SetBrightness(40),(router.route("ajuste o brilho da tela para 40",CommandSource.VOICE) as CommandResult.Success).action)}
- @Test fun sensitiveCallsStillRequireConfirmation(){assertTrue(router.route("Morok, ligar para 5511999999999",CommandSource.VOICE) is CommandResult.RequiresConfirmation)}
+    private val router = CommandRouter()
+    private fun result(text: String) = router.route(text, CommandSource.VOICE)
+
+    @Test fun greetingAndHelpAreHandled() {
+        assertTrue(result("oi") is CommandResult.Success)
+        assertTrue(result("ajuda") is CommandResult.Success)
+    }
+
+    @Test fun wakeAndAccentNormalizationWork() {
+        assertTrue(result("MOROK, configurações") is CommandResult.Success)
+        assertTrue(result("Morok, ligar a lanterna") is CommandResult.Success)
+        assertTrue(result("ok morok, abrir o wi-fi") is CommandResult.Success)
+    }
+
+    @Test fun flashlightAliasesWork() {
+        assertTrue(result("ligar lanterna") is CommandResult.Success)
+        assertTrue(result("acender a lanterna") is CommandResult.Success)
+        assertTrue(result("desligar lanterna") is CommandResult.Success)
+    }
+
+    @Test fun navigationCommandsMapToActions() {
+        assertEquals(CommandAction.AccessibilityBack, (result("voltar") as CommandResult.Success).action)
+        assertEquals(CommandAction.AccessibilityHome, (result("tela inicial") as CommandResult.Success).action)
+        assertEquals(CommandAction.AccessibilityRecents, (result("apps recentes") as CommandResult.Success).action)
+        assertTrue(result("clique em Configurações") is CommandResult.Success)
+        assertTrue(result("toque em Continuar") is CommandResult.Success)
+        assertTrue(result("digite Korczak") is CommandResult.Success)
+    }
+
+    @Test fun volumeAndBrightnessCommandsAreValidated() {
+        assertEquals(CommandAction.SetVolume(50), (result("coloque o volume para 50%") as CommandResult.Success).action)
+        assertEquals(CommandAction.SetBrightness(40), (result("ajuste o brilho da tela para 40") as CommandResult.Success).action)
+        assertTrue(result("volume 101") is CommandResult.Failure)
+        assertTrue(result("brilho 101") is CommandResult.Failure)
+    }
+
+    @Test fun mediaAndSoundCommandsWork() {
+        assertEquals(CommandAction.MediaPlayPause, (result("pausar música") as CommandResult.Success).action)
+        assertEquals(CommandAction.MediaNext, (result("próxima música") as CommandResult.Success).action)
+        assertEquals(CommandAction.MediaPrevious, (result("música anterior") as CommandResult.Success).action)
+        assertEquals(CommandAction.RingerMode.SILENT, ((result("silenciar") as CommandResult.Success).action as CommandAction.SetRingerMode).mode)
+        assertEquals(CommandAction.RingerMode.VIBRATE, ((result("vibrar") as CommandResult.Success).action as CommandAction.SetRingerMode).mode)
+        assertEquals(CommandAction.RingerMode.NORMAL, ((result("modo normal") as CommandResult.Success).action as CommandAction.SetRingerMode).mode)
+    }
+
+    @Test fun settingsAndDeviceCommandsWork() {
+        assertTrue(result("abrir câmera") is CommandResult.Success)
+        assertTrue(result("abrir calendário") is CommandResult.Success)
+        assertTrue(result("abrir contatos") is CommandResult.Success)
+        assertTrue(result("abrir arquivos") is CommandResult.Success)
+        assertTrue(result("abrir acessibilidade") is CommandResult.Success)
+        assertTrue(result("abrir localização") is CommandResult.Success)
+        assertTrue(result("abrir bluetooth") is CommandResult.Success)
+        assertTrue(result("abrir notificações") is CommandResult.Success)
+        assertTrue(result("abrir configurações do Morok") is CommandResult.Success)
+        assertTrue(result("bateria") is CommandResult.Success)
+        assertTrue(result("armazenamento") is CommandResult.Success)
+        assertTrue(result("internet") is CommandResult.Success)
+    }
+
+    @Test fun appAndWebCommandsWork() {
+        assertEquals(CommandAction.OpenApp("chrome"), (result("abrir chrome") as CommandResult.Success).action)
+        assertEquals(CommandAction.OpenUrl("https://example.com"), (result("abrir example.com") as CommandResult.Success).action)
+        assertTrue(result("pesquisar notícias sobre tecnologia") is CommandResult.Success)
+    }
+
+    @Test fun sensitiveCallsAndMessagesRequireConfirmation() {
+        val call = result("ligar para 5511999999999") as CommandResult.RequiresConfirmation
+        assertTrue(call.message.contains("5511999999999"))
+        val sms = result("enviar mensagem para 5511999999999 dizendo olá") as CommandResult.RequiresConfirmation
+        assertEquals(CommandAction.SendSms("5511999999999", "olá"), sms.action)
+    }
+
+    @Test fun unknownAndBlankCommandsFail() {
+        assertTrue(result("   ") is CommandResult.Failure)
+        assertTrue(result("fazer uma coisa que não existe") is CommandResult.Failure)
+    }
 }
