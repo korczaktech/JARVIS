@@ -9,11 +9,19 @@ sealed interface CommandAction {
  data object AccessibilityRecents:CommandAction
  data class AccessibilityClick(val text:String):CommandAction
  data class AccessibilityType(val text:String):CommandAction
- data object OpenWifiSettings:CommandAction
+ data class AccessibilityLongClick(val text:String):CommandAction
+ data class AccessibilitySwipe(val direction:SwipeDirection):CommandAction
+ data class AccessibilityScroll(val direction:ScrollDirection):CommandAction
+ data object AccessibilityClose:CommandAction
+ data object AccessibilityReadScreen:CommandAction
+ enum class SwipeDirection { LEFT, RIGHT, UP, DOWN }
+ enum class ScrollDirection { UP, DOWN }
  data object OpenBluetoothSettings:CommandAction
  data object OpenLocationSettings:CommandAction
  data object OpenAccessibilitySettings:CommandAction
  data object OpenAppSettings:CommandAction
+ data object OpenAppPermissions:CommandAction
+ data object OpenWifiSettings:CommandAction
  data object FlashlightOn:CommandAction
  data object FlashlightOff:CommandAction
  data class SetVolume(val percent:Int):CommandAction
