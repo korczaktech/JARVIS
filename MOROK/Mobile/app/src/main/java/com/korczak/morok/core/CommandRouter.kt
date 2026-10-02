@@ -44,7 +44,7 @@ class CommandRouter {
                 CommandResult.Success("Abrindo aplicativos recentes.", CommandAction.AccessibilityRecents)
             Regex("^(clique|clicar|pressione) em .+").matches(n) ->
                 CommandResult.Success("Procurando o controle.", CommandAction.AccessibilityClick(n.substringAfter(" em ").trim()))
-            Regex("^(toque|tocar) em .+").matches(n) ->
+            Regex("^(toque|tocar|tape|tocar) em .+").matches(n) ->
                 CommandResult.Success("Procurando o controle.", CommandAction.AccessibilityClick(n.substringAfter(" em ").trim()))
             Regex("^(digite|escreva|insira) .+").matches(n) ->
                 CommandResult.Success("Inserindo texto.", CommandAction.AccessibilityType(n.substringAfter(" ").trim()))
