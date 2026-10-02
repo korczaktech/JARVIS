@@ -25,6 +25,19 @@ class CommandRouterTest {
         assertTrue(result("desligar lanterna") is CommandResult.Success)
     }
 
+    @Test fun completeAccessibilityCommandsMapToActions() {
+        assertEquals(CommandAction.AccessibilityLongClick("Configurações"), (result("pressione e segure em Configurações") as CommandResult.Success).action)
+        assertEquals(CommandAction.SwipeDirection.LEFT, ((result("deslize para a esquerda") as CommandResult.Success).action as CommandAction.AccessibilitySwipe).direction)
+        assertEquals(CommandAction.SwipeDirection.RIGHT, ((result("deslize para a direita") as CommandResult.Success).action as CommandAction.AccessibilitySwipe).direction)
+        assertEquals(CommandAction.SwipeDirection.UP, ((result("deslize para cima") as CommandResult.Success).action as CommandAction.AccessibilitySwipe).direction)
+        assertEquals(CommandAction.SwipeDirection.DOWN, ((result("deslize para baixo") as CommandResult.Success).action as CommandAction.AccessibilitySwipe).direction)
+        assertEquals(CommandAction.ScrollDirection.UP, ((result("role para cima") as CommandResult.Success).action as CommandAction.AccessibilityScroll).direction)
+        assertEquals(CommandAction.ScrollDirection.DOWN, ((result("role para baixo") as CommandResult.Success).action as CommandAction.AccessibilityScroll).direction)
+        assertTrue(result("fechar aplicativo") is CommandResult.Success)
+        assertTrue(result("ler a tela") is CommandResult.Success)
+        assertTrue(result("abrir permissões") is CommandResult.Success)
+    }
+
     @Test fun navigationCommandsMapToActions() {
         assertEquals(CommandAction.AccessibilityBack, (result("voltar") as CommandResult.Success).action)
         assertEquals(CommandAction.AccessibilityHome, (result("tela inicial") as CommandResult.Success).action)
